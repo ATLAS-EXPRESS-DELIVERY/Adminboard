@@ -153,6 +153,15 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
 .ship-card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .ship-card .id{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.92rem;color:var(--ink-dark);}
 .ship-card .route{font-size:0.85rem;color:var(--slate);}
+.ship-card-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.ship-card-actions .mini-btn{border:1.5px solid var(--border);background:#fff;color:var(--ink);
+  border-radius:6px;padding:6px 10px;font-size:0.74rem;font-weight:600;cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;display:inline-flex;align-items:center;gap:4px;transition:all .15s;}
+.ship-card-actions .mini-btn:hover{border-color:var(--sky-accent);color:var(--sky-accent);background:var(--sky-light);}
+.ship-card-actions .mini-btn.mini-danger{color:var(--red);border-color:#E8C7C7;}
+.ship-card-actions .mini-btn.mini-danger:hover{background:#FCEDED;border-color:var(--red);}
+.ship-card-actions .mini-btn.mini-green{color:var(--green);border-color:#B7E3D3;}
+.ship-card-actions .mini-btn.mini-green:hover{background:#E7F8F1;border-color:var(--green);}
 .status-badge{display:inline-block;padding:4px 11px;border-radius:99px;
   font-size:0.7rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;}
 .status-badge.delivered{background:rgba(26,163,122,0.15);color:var(--green);}
@@ -975,8 +984,40 @@ function buildShipCard(s, onClickOverride) {
     </div>
     <div class="route">${esc(s.origin)} → ${esc(s.destination)}</div>
     <div class="route" style="margin-top:3px;">📦 ${esc(s.goods)} · 👤 ${esc(s.receiverName)}</div>
+    <div class="ship-card-actions">
+      <button type="button" class="mini-btn" onclick="event.stopPropagation(); viewShipmentCard('${esc(s.id)}')">👁 View</button>
+      <button type="button" class="mini-btn mini-green" onclick="event.stopPropagation(); downloadInvoiceCard('${esc(s.id)}')">⬇ Invoice</button>
+      <button type="button" class="mini-btn mini-danger" onclick="event.stopPropagation(); deleteShipmentCard('${esc(s.id)}')">🗑 Delete</button>
+    </div>
   `;
   return div;
+}
+
+function viewShipmentCard(id) {
+  selectShipment(id);
+}
+
+function downloadInvoiceCard(id) {
+  const s = allShipments[id];
+  if (s) generateInvoice(s);
+  else showToast('Shipment not found.', 'error');
+}
+
+async function deleteShipmentCard(id) {
+  const s = allShipments[id];
+  if (!s) return;
+  if (!confirm('Delete shipment ' + id + '? This cannot be undone.')) return;
+  delete allShipments[id];
+  try {
+    await saveBin({ shipments: allShipments });
+    if (selectedId === id) selectedId = null;
+    renderList(document.querySelector('#tab-shipments .search-bar') ? document.querySelector('#tab-shipments .search-bar').value : '');
+    renderDetail();
+    updateStats();
+    showToast('Shipment deleted.', 'info');
+  } catch (e) {
+    showToast('Error deleting shipment.', 'error');
+  }
 }
 
 function filterShipments(q) { renderList(q); }
