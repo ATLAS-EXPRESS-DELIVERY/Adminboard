@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ATLAS EXPRESS SERVICE — Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
   --ink-dark:#0A1F3D;
@@ -1007,16 +1008,22 @@ async function deleteShipmentCard(id) {
   const s = allShipments[id];
   if (!s) return;
   if (!confirm('Delete shipment ' + id + '? This cannot be undone.')) return;
+
+  // Remove locally and refresh the UI immediately so it's visibly gone right away
   delete allShipments[id];
+  if (selectedId === id) selectedId = null;
+  const searchVal = document.querySelector('#tab-shipments .search-bar') ? document.querySelector('#tab-shipments .search-bar').value : '';
+  renderList(searchVal);
+  renderDetail();
+  updateStats();
+  renderDashboard();
+  showToast('Shipment deleted.', 'info');
+
+  // Persist the change to the backend
   try {
     await saveBin({ shipments: allShipments });
-    if (selectedId === id) selectedId = null;
-    renderList(document.querySelector('#tab-shipments .search-bar') ? document.querySelector('#tab-shipments .search-bar').value : '');
-    renderDetail();
-    updateStats();
-    showToast('Shipment deleted.', 'info');
   } catch (e) {
-    showToast('Error deleting shipment.', 'error');
+    showToast('Deleted locally, but failed to sync — check connection.', 'error');
   }
 }
 
@@ -1136,16 +1143,18 @@ async function addLocationUpdate() {
 async function deleteShipment() {
   if (!selectedId) return;
   if (!confirm('Delete shipment ' + selectedId + '? This cannot be undone.')) return;
-  delete allShipments[selectedId];
+  const id = selectedId;
+  delete allShipments[id];
+  selectedId = null;
+  renderList();
+  renderDetail();
+  updateStats();
+  renderDashboard();
+  showToast('Shipment deleted.', 'info');
   try {
     await saveBin({ shipments: allShipments });
-    selectedId = null;
-    renderList();
-    renderDetail();
-    updateStats();
-    showToast('Shipment deleted.', 'info');
   } catch(e) {
-    showToast('Error deleting shipment.', 'error');
+    showToast('Deleted locally, but failed to sync — check connection.', 'error');
   }
 }
 
@@ -1300,254 +1309,418 @@ function strokeRR(ctx, x, y, w, h, r, color, lineWidth) {
   ctx.stroke();
 }
 
-function generateInvoice(s) {
-  const SCALE = 4; // px per "mm" — bump this up for a higher-resolution JPG
-  const W = 210, M = 18, cw = W - M * 2, H = 520; // taller for 2-page simulation
+async function generateInvoice(s) {
+  if (!window.jspdf) {
+    showToast('PDF engine still loading — please try again in a moment.', 'error');
+    return;
+  }
+  try { await document.fonts.load('700 40px Caveat'); await document.fonts.load('600 24px Caveat'); } catch (e) {}
+
+  const SCALE = 4;                       // px per "mm"
+  const PW = 210, PH = 297, M = 16, CW = PW - M * 2;
   const px = mm => mm * SCALE;
-  const FS = pt => pt * 0.3528 * SCALE; // pt (as used in the old layout) -> px
-
-  const canvas = document.createElement('canvas');
-  canvas.width = px(W);
-  canvas.height = px(H);
-  const ctx = canvas.getContext('2d');
+  const FS  = pt => pt * 0.3528 * SCALE;  // pt -> px
   const FONT = 'Helvetica, Arial, sans-serif';
-  ctx.textBaseline = 'alphabetic';
+  const SIGFONT = "'Caveat', cursive";
 
-  // white background (JPG has no transparency)
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  function newPage() {
+    const c = document.createElement('canvas');
+    c.width = px(PW); c.height = px(PH);
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, c.width, c.height);
+    // faint diagonal brand watermark
+    ctx.save();
+    ctx.globalAlpha = 0.035;
+    ctx.fillStyle = 'rgb(14,165,233)';
+    ctx.font = `bold ${FS(42)}px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.translate(px(PW / 2), px(PH / 2));
+    ctx.rotate(-28 * Math.PI / 180);
+    ctx.fillText('ATLAS EXPRESS SERVICE', 0, 0);
+    ctx.restore();
+    // outer frame
+    ctx.strokeStyle = 'rgb(210,224,240)';
+    ctx.lineWidth = px(0.35);
+    ctx.strokeRect(px(8), px(8), px(PW - 16), px(PH - 16));
+    return { c, ctx };
+  }
 
-  // watermark
-  ctx.save();
-  ctx.globalAlpha = 0.045;
-  ctx.fillStyle = 'rgb(14,165,233)';
-  ctx.font = `bold ${FS(110)}px ${FONT}`;
-  ctx.textAlign = 'center';
-  ctx.fillText('AE', px(W / 2), px(148));
-  ctx.restore();
-
-  // header
-  ctx.fillStyle = 'rgb(10,31,61)';
-  ctx.fillRect(0, 0, px(W), px(46));
-  ctx.fillStyle = 'rgb(26,63,114)';
-  ctx.fillRect(0, px(40), px(W), px(6));
-
-  fillRR(ctx, px(M), px(7), px(20), px(20), px(3), 'rgb(14,165,233)');
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${FS(11)}px ${FONT}`;
-  ctx.textAlign = 'center';
-  ctx.fillText('AE', px(M + 10), px(20));
-
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${FS(18)}px ${FONT}`;
-  ctx.fillText('ATLAS EXPRESS SERVICE Delivery', px(M + 24), px(16));
-  ctx.font = `${FS(8.5)}px ${FONT}`;
-  ctx.fillStyle = 'rgb(180,210,240)';
-  ctx.fillText('Reliable · Fast · Global  ·  info.guaranteeshipping@gmail.com  ·  +1 62 AE-SHIPS', px(M + 24), px(23));
-  ctx.fillText('506 S Spring St #13308, Los Angeles, CA 90013, USA', px(M + 24), px(29));
-
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${FS(14)}px ${FONT}`;
-  ctx.fillText('SHIPPING INVOICE', px(W - M), px(16));
-  ctx.font = `${FS(8)}px ${FONT}`;
-  ctx.fillStyle = 'rgb(180,210,240)';
-  ctx.fillText('Official Document', px(W - M), px(23));
-  ctx.fillText('Issued: ' + new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}), px(W - M), px(29));
-
-  // tracking id bar
-  fillRR(ctx, px(M), px(52), px(cw), px(13), px(3), 'rgb(14,165,233)');
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.font = `bold ${FS(12)}px ${FONT}`;
-  ctx.fillText('TRACKING ID: ' + s.id, px(W / 2), px(60.5));
-
-  let y = 73;
-  const col1x = M, col2x = W / 2 + 3, colW = (cw / 2) - 3;
-
-  // sender box
-  fillRR(ctx, px(col1x), px(y), px(colW), px(46), px(2), 'rgb(224,242,254)');
-  strokeRR(ctx, px(col1x), px(y), px(colW), px(46), px(2), 'rgb(26,63,114)', px(0.4));
-  ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgb(10,31,61)';
-  ctx.font = `bold ${FS(8)}px ${FONT}`;
-  ctx.fillText('SENDER INFORMATION', px(col1x + 4), px(y + 7));
-  ctx.font = `${FS(8.2)}px ${FONT}`;
-  ctx.fillStyle = 'rgb(30,50,80)';
-  ctx.fillText('Name:    ' + s.senderName,  px(col1x + 4), px(y + 15));
-  ctx.fillText('Phone:   ' + s.senderPhone, px(col1x + 4), px(y + 22));
-  ctx.fillText('Email:   ' + s.senderEmail, px(col1x + 4), px(y + 29));
-  ctx.fillText('Origin:  ' + s.origin,       px(col1x + 4), px(y + 36));
-
-  // receiver box
-  fillRR(ctx, px(col2x), px(y), px(colW), px(46), px(2), 'rgb(240,249,255)');
-  strokeRR(ctx, px(col2x), px(y), px(colW), px(46), px(2), 'rgb(14,165,233)', px(0.4));
-  ctx.fillStyle = 'rgb(10,31,61)';
-  ctx.font = `bold ${FS(8)}px ${FONT}`;
-  ctx.fillText('RECEIVER INFORMATION', px(col2x + 4), px(y + 7));
-  ctx.font = `${FS(8.2)}px ${FONT}`;
-  ctx.fillStyle = 'rgb(30,50,80)';
-  ctx.fillText('Name:    ' + s.receiverName,  px(col2x + 4), px(y + 15));
-  ctx.fillText('Phone:   ' + s.receiverPhone, px(col2x + 4), px(y + 22));
-  ctx.fillText('Email:   ' + s.receiverEmail, px(col2x + 4), px(y + 29));
-  ctx.fillText('Dest:    ' + s.destination,    px(col2x + 4), px(y + 36));
-
-  y += 52;
-
-  // shipment details header
-  fillRR(ctx, px(M), px(y), px(cw), px(8), px(2), 'rgb(10,31,61)');
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${FS(8.5)}px ${FONT}`;
-  ctx.fillText('SHIPMENT DETAILS', px(M + 4), px(y + 5.5));
-  y += 10;
-
-  [
-    ['Goods Description', s.goods],
-    ['Item Type',         s.itemType || '—'],
-    ['Weight',            s.weight],
-    ['Quantity',          s.quantity || '1'],
-    ['Declared Value',    s.declaredValue || 'N/A'],
-    ['Amount to be Paid', s.amountToPay || 'N/A'],
-    ['Service Type',      s.service || 'International Air Express'],
-    ['Date Shipped',      fmtDateOnly(s.dateShipped)],
-    ['Expected Delivery', fmtDateOnly(s.eta)],
-    ['Current Stage',     s.status],
-    ['Special Notes',     s.notes || 'None'],
-  ].forEach((row, i) => {
-    ctx.fillStyle = i % 2 === 0 ? 'rgb(248,252,255)' : 'rgb(255,255,255)';
-    ctx.fillRect(px(M), px(y), px(cw), px(8));
-    ctx.fillStyle = 'rgb(74,96,128)';
-    ctx.font = `${FS(8)}px ${FONT}`;
-    ctx.fillText(row[0], px(M + 4), px(y + 5.5));
+  function drawHeader(ctx, pageLabel) {
     ctx.fillStyle = 'rgb(10,31,61)';
+    ctx.fillRect(0, 0, px(PW), px(34));
+    ctx.fillStyle = 'rgb(14,165,233)';
+    ctx.fillRect(0, px(34), px(PW), px(2.2));
+
+    fillRR(ctx, px(M), px(8), px(17), px(17), px(3), 'rgb(14,165,233)');
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${FS(11)}px ${FONT}`;
+    ctx.fillText('AE', px(M + 8.5), px(19.5));
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${FS(15)}px ${FONT}`;
+    ctx.fillText('ATLAS EXPRESS SERVICE', px(M + 22), px(15.5));
+    ctx.font = `${FS(7.2)}px ${FONT}`;
+    ctx.fillStyle = 'rgb(180,210,240)';
+    ctx.fillText('✈  ALWAYS AT YOUR SERVICE  ✈', px(M + 22), px(21.5));
+    ctx.fillText('506 S Spring St #13308, Los Angeles, CA 90013, USA  ·  info.guaranteeshipping@gmail.com', px(M + 22), px(27.5));
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${FS(11)}px ${FONT}`;
+    ctx.fillText(pageLabel, px(PW - M), px(15.5));
+    ctx.font = `${FS(6.8)}px ${FONT}`;
+    ctx.fillStyle = 'rgb(180,210,240)';
+    ctx.fillText('Tracking ID: ' + s.id, px(PW - M), px(21.5));
+    ctx.fillText('Issued: ' + new Date().toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }), px(PW - M), px(27.5));
+  }
+
+  function drawFooter(ctx, pageNum) {
+    ctx.strokeStyle = 'rgb(210,224,240)';
+    ctx.lineWidth = px(0.3);
+    ctx.beginPath();
+    ctx.moveTo(px(M), px(PH - 16));
+    ctx.lineTo(px(PW - M), px(PH - 16));
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgb(120,135,155)';
+    ctx.font = `${FS(6.2)}px ${FONT}`;
+    ctx.fillText('Track online: ' + buildTrackLink(s.id), px(PW / 2), px(PH - 11));
+    ctx.fillText('This is an official shipping document issued by ATLAS EXPRESS SERVICE  ·  Page ' + pageNum + ' of 3', px(PW / 2), px(PH - 6.5));
+  }
+
+  function drawSectionTitle(ctx, y, text) {
+    fillRR(ctx, px(M), px(y), px(CW), px(7.5), px(1.5), 'rgb(10,31,61)');
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
     ctx.font = `bold ${FS(8)}px ${FONT}`;
-    ctx.fillText(String(row[1]), px(M + 72), px(y + 5.5));
-    y += 8;
+    ctx.fillText(text, px(M + 3.5), px(y + 5.3));
+  }
+
+  function drawStar(ctx, cx, cy, r, color) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const ang = (Math.PI / 5) * i - Math.PI / 2;
+      const rad = i % 2 === 0 ? r : r * 0.42;
+      const x = Math.cos(ang) * rad, y2 = Math.sin(ang) * rad;
+      if (i === 0) ctx.moveTo(x, y2); else ctx.lineTo(x, y2);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCircleStamp(ctx, cx, cy, r, mainText, subText, serial, color, angle) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((angle || 0) * Math.PI / 180);
+    ctx.globalAlpha = 0.82;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = r * 0.05;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = r * 0.026;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.83, 0, Math.PI * 2); ctx.stroke();
+    drawStar(ctx, 0, -r * 0.46, r * 0.13, color);
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${r * 0.165}px ${FONT}`;
+    const words = mainText.split(' ');
+    if (words.length > 1 && mainText.length > 10) {
+      const mid = Math.ceil(words.length / 2);
+      ctx.fillText(words.slice(0, mid).join(' '), 0, -r * 0.02);
+      ctx.fillText(words.slice(mid).join(' '), 0, r * 0.17);
+    } else {
+      ctx.fillText(mainText, 0, r * 0.06);
+    }
+    ctx.font = `${r * 0.1}px ${FONT}`;
+    ctx.fillText(subText, 0, r * 0.42);
+    ctx.globalAlpha = 0.6;
+    ctx.font = `${r * 0.085}px ${FONT}`;
+    ctx.fillText(serial, 0, r * 0.6);
+    ctx.restore();
+  }
+
+  function drawSignature(ctx, x, y, w, role, name) {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgb(10,31,61)';
+    ctx.font = `bold ${FS(6.6)}px ${FONT}`;
+    ctx.fillText(role.toUpperCase(), px(x), px(y));
+    ctx.fillStyle = 'rgb(30,40,60)';
+    ctx.font = `${FS(16)}px ${SIGFONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(name, px(x + w / 2), px(y + 13));
+    ctx.strokeStyle = 'rgb(120,135,155)';
+    ctx.lineWidth = px(0.28);
+    ctx.beginPath();
+    ctx.moveTo(px(x), px(y + 16.5));
+    ctx.lineTo(px(x + w), px(y + 16.5));
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgb(120,135,155)';
+    ctx.font = `${FS(5.8)}px ${FONT}`;
+    ctx.fillText('Authorized Signature', px(x + w / 2), px(y + 21.5));
+  }
+
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    words.forEach(w => {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function parseMoney(str) {
+    if (str == null) return null;
+    const n = parseFloat(String(str).replace(/[^0-9.\-]/g, ''));
+    return isNaN(n) ? null : n;
+  }
+  function fmtMoney(n) {
+    return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  /* ══════════════════════════ PAGE 1 — INVOICE ══════════════════════════ */
+  const p1 = newPage();
+  drawHeader(p1.ctx, 'SHIPPING INVOICE');
+  let y = 44;
+
+  fillRR(p1.ctx, px(M), px(y), px(CW), px(9), px(2), 'rgb(14,165,233)');
+  p1.ctx.fillStyle = '#ffffff'; p1.ctx.textAlign = 'center';
+  p1.ctx.font = `bold ${FS(10)}px ${FONT}`;
+  p1.ctx.fillText('TRACKING ID: ' + s.id, px(PW / 2), px(y + 6.2));
+  y += 15;
+
+  const col1x = M, col2x = PW / 2 + 2, colW = (CW / 2) - 2;
+  fillRR(p1.ctx, px(col1x), px(y), px(colW), px(38), px(2), 'rgb(247,251,255)');
+  strokeRR(p1.ctx, px(col1x), px(y), px(colW), px(38), px(2), 'rgb(26,63,114)', px(0.35));
+  p1.ctx.textAlign = 'left'; p1.ctx.fillStyle = 'rgb(10,31,61)';
+  p1.ctx.font = `bold ${FS(7.6)}px ${FONT}`;
+  p1.ctx.fillText('SENDER DETAILS', px(col1x + 4), px(y + 6.5));
+  p1.ctx.font = `${FS(7.4)}px ${FONT}`; p1.ctx.fillStyle = 'rgb(40,55,80)';
+  [['Name', s.senderName], ['Phone', s.senderPhone], ['Email', s.senderEmail], ['Origin', s.origin]].forEach((r, i) => {
+    p1.ctx.fillText(r[0] + ':  ' + r[1], px(col1x + 4), px(y + 13.5 + i * 6));
   });
 
-  y += 6;
+  fillRR(p1.ctx, px(col2x), px(y), px(colW), px(38), px(2), 'rgb(240,249,255)');
+  strokeRR(p1.ctx, px(col2x), px(y), px(colW), px(38), px(2), 'rgb(14,165,233)', px(0.35));
+  p1.ctx.fillStyle = 'rgb(10,31,61)';
+  p1.ctx.font = `bold ${FS(7.6)}px ${FONT}`;
+  p1.ctx.fillText('RECEIVER DETAILS', px(col2x + 4), px(y + 6.5));
+  p1.ctx.font = `${FS(7.4)}px ${FONT}`; p1.ctx.fillStyle = 'rgb(40,55,80)';
+  [['Name', s.receiverName], ['Phone', s.receiverPhone], ['Email', s.receiverEmail], ['Destination', s.destination]].forEach((r, i) => {
+    p1.ctx.fillText(r[0] + ':  ' + r[1], px(col2x + 4), px(y + 13.5 + i * 6));
+  });
 
-  if (s.history && s.history.length > 0) {
-    fillRR(ctx, px(M), px(y), px(cw), px(8), px(2), 'rgb(10,31,61)');
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${FS(8.5)}px ${FONT}`;
-    ctx.fillText('TRACKING TIMELINE', px(M + 4), px(y + 5.5));
-    y += 10;
-    const curIdx = STAGES.indexOf(s.status);
-    STAGES.forEach((stage, i) => {
-      const done = curIdx >= 0 && i <= curIdx;
-      ctx.fillStyle = i % 2 === 0 ? 'rgb(240,249,255)' : 'rgb(255,255,255)';
-      ctx.fillRect(px(M), px(y), px(cw), px(7));
-      ctx.fillStyle = done ? 'rgb(14,165,233)' : 'rgb(180,190,205)';
-      ctx.font = `${done ? 'bold ' : ''}${FS(8)}px ${FONT}`;
-      ctx.fillText((done ? '✓ ' : '○ ') + stage, px(M + 4), px(y + 5));
-      y += 7;
-    });
-    y += 4;
+  y += 46;
+  drawSectionTitle(p1.ctx, y, 'SHIPMENT DETAILS');
+  y += 10.5;
+  fillRR(p1.ctx, px(M), px(y), px(CW), px(7), px(1.5), 'rgb(186,224,247)');
+  p1.ctx.fillStyle = 'rgb(10,31,61)'; p1.ctx.font = `bold ${FS(6.8)}px ${FONT}`;
+  p1.ctx.textAlign = 'left';
+  p1.ctx.fillText('DESCRIPTION', px(M + 3), px(y + 4.8));
+  p1.ctx.fillText('WEIGHT', px(M + CW * 0.48), px(y + 4.8));
+  p1.ctx.fillText('QTY', px(M + CW * 0.65), px(y + 4.8));
+  p1.ctx.fillText('DECLARED VALUE', px(M + CW * 0.78), px(y + 4.8));
+  y += 8;
+  p1.ctx.fillStyle = '#ffffff';
+  p1.ctx.fillRect(px(M), px(y), px(CW), px(8));
+  p1.ctx.strokeStyle = 'rgb(224,232,242)'; p1.ctx.lineWidth = px(0.25);
+  p1.ctx.strokeRect(px(M), px(y), px(CW), px(8));
+  p1.ctx.fillStyle = 'rgb(20,30,50)'; p1.ctx.font = `${FS(7.4)}px ${FONT}`;
+  p1.ctx.fillText(s.goods, px(M + 3), px(y + 5.4));
+  p1.ctx.fillText(String(s.weight), px(M + CW * 0.48), px(y + 5.4));
+  p1.ctx.fillText(String(s.quantity || '1'), px(M + CW * 0.65), px(y + 5.4));
+  p1.ctx.fillText(String(s.declaredValue || 'N/A'), px(M + CW * 0.78), px(y + 5.4));
+  y += 8 + 6;
+
+  drawSectionTitle(p1.ctx, y, 'TRACKING INFORMATION');
+  y += 10.5;
+  p1.ctx.fillStyle = 'rgb(30,45,70)'; p1.ctx.font = `${FS(7.4)}px ${FONT}`;
+  p1.ctx.fillText('Service Type:  ' + (s.service || '—'), px(M + 2), px(y));
+  p1.ctx.fillText('Date Shipped:  ' + fmtDateOnly(s.dateShipped), px(M + 2), px(y + 7));
+  p1.ctx.fillText('Expected Delivery:  ' + fmtDateOnly(s.eta), px(M + 2), px(y + 14));
+  p1.ctx.fillText('Current Stage:  ' + s.status, px(M + 2), px(y + 21));
+
+  const bx = M + CW * 0.55, bw = CW * 0.45;
+  fillRR(p1.ctx, px(bx), px(y - 4), px(bw), px(22), px(1.5), 'rgb(247,250,253)');
+  strokeRR(p1.ctx, px(bx), px(y - 4), px(bw), px(22), px(1.5), 'rgb(210,222,238)', px(0.3));
+  p1.ctx.strokeStyle = 'rgb(15,25,40)';
+  for (let i = 0; i < 28; i++) {
+    const bw2 = (Math.sin(i * 17) + 1.4);
+    p1.ctx.lineWidth = px(0.35 * bw2);
+    const bxi = bx + 3 + i * (bw - 6) / 28;
+    p1.ctx.beginPath();
+    p1.ctx.moveTo(px(bxi), px(y - 1));
+    p1.ctx.lineTo(px(bxi), px(y + 14));
+    p1.ctx.stroke();
   }
+  p1.ctx.textAlign = 'center'; p1.ctx.fillStyle = 'rgb(90,100,120)'; p1.ctx.font = `${FS(5.4)}px ${FONT}`;
+  p1.ctx.fillText(s.id, px(bx + bw / 2), px(y + 19));
+
+  y += 30;
 
   const isDelivered = s.status === 'Delivered';
   const isTransit   = !isDelivered && s.status !== 'Shipment Created';
   const bannerColor = isDelivered ? 'rgb(26,163,122)' : isTransit ? 'rgb(10,31,61)' : 'rgb(74,96,128)';
-  fillRR(ctx, px(M), px(y), px(cw), px(13), px(3), bannerColor);
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.font = `bold ${FS(10)}px ${FONT}`;
-  ctx.fillText('CURRENT STAGE: ' + s.status.toUpperCase(), px(W / 2), px(y + 8.5));
-  y += 19;
-
-  ctx.strokeStyle = 'rgb(176,207,234)';
-  ctx.lineWidth = px(0.3);
-  ctx.beginPath();
-  ctx.moveTo(px(M), px(y));
-  ctx.lineTo(px(W - M), px(y));
-  ctx.stroke();
-  y += 6;
-  ctx.fillStyle = 'rgb(74,96,128)';
-  ctx.font = `${FS(7.5)}px ${FONT}`;
-  ctx.textAlign = 'center';
-  ctx.fillText('Track this shipment online: ' + buildTrackLink(s.id), px(W / 2), px(y));
-  y += 5;
-  ctx.fillText('Generated by ATLAS EXPRESS SERVICE Admin Portal · ' + new Date().toLocaleString(), px(W / 2), px(y));
-  y += 5;
-  ctx.fillText('For tracking enquiries: info.guaranteeshipping@gmail.com · This is an official shipping invoice.', px(W / 2), px(y));
+  fillRR(p1.ctx, px(M), px(y), px(CW), px(10), px(2), bannerColor);
+  p1.ctx.fillStyle = '#ffffff'; p1.ctx.textAlign = 'center'; p1.ctx.font = `bold ${FS(8.5)}px ${FONT}`;
+  p1.ctx.fillText('CURRENT STAGE: ' + s.status.toUpperCase(), px(PW / 2), px(y + 6.8));
 
   if (isDelivered) {
-    ctx.save();
-    ctx.globalAlpha = 0.07;
-    ctx.fillStyle = 'rgb(26,163,122)';
-    ctx.font = `bold ${FS(44)}px ${FONT}`;
-    ctx.textAlign = 'center';
-    ctx.translate(px(W / 2), px(190));
-    ctx.rotate(-35 * Math.PI / 180);
-    ctx.fillText('DELIVERED', 0, 0);
-    ctx.restore();
+    p1.ctx.save();
+    p1.ctx.globalAlpha = 0.08;
+    p1.ctx.fillStyle = 'rgb(26,163,122)';
+    p1.ctx.font = `bold ${FS(50)}px ${FONT}`;
+    p1.ctx.textAlign = 'center';
+    p1.ctx.translate(px(PW / 2), px(150));
+    p1.ctx.rotate(-30 * Math.PI / 180);
+    p1.ctx.fillText('DELIVERED', 0, 0);
+    p1.ctx.restore();
   }
-
-  // Signatures and Stamps section (Page 1 end)
-  y += 30;
-  ctx.fillStyle = 'rgb(10,31,61)';
-  ctx.font = `bold ${FS(9)}px ${FONT}`;
-  ctx.textAlign = 'left';
-  ctx.fillText('APPROVED BY:', px(M), px(y));
-  ctx.fillText('Manager: J Franklin', px(M + 80), px(y));
-  ctx.fillText('Sender: ' + s.senderName, px(M + 80), px(y + 12));
-  ctx.fillText('Security: Office Mark', px(M + 80), px(y + 24));
-
-  // Simulate stamps
-  ctx.strokeStyle = '#B23A3A';
-  ctx.lineWidth = px(2);
-  ctx.font = `bold ${FS(8)}px ${FONT}`;
-  ctx.textAlign = 'center';
-  // Stamp 1: APPROVED
-  fillRR(ctx, px(M + 20), px(y + 40), px(45), px(20), px(2), 'rgba(255,255,255,0.9)');
-  ctx.strokeRect(px(M + 20), px(y + 40), px(45), px(20));
-  ctx.fillStyle = '#B23A3A';
-  ctx.fillText('APPROVED', px(M + 42), px(y + 53));
-  // Stamp 2: LEGAL GOODS
-  fillRR(ctx, px(M + 80), px(y + 40), px(55), px(20), px(2), 'rgba(255,255,255,0.9)');
-  ctx.strokeRect(px(M + 80), px(y + 40), px(55), px(20));
-  ctx.fillText('LEGAL GOODS', px(M + 107), px(y + 53));
-  // Stamp 3: SECURITY CHECKED
-  fillRR(ctx, px(M + 150), px(y + 40), px(55), px(20), px(2), 'rgba(255,255,255,0.9)');
-  ctx.strokeRect(px(M + 150), px(y + 40), px(55), px(20));
-  ctx.fillText('SEC. APPROVED', px(M + 177), px(y + 53));
-
-  // Page 2 simulation - Terms and Conditions
-  y = 320; // start second "page"
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, px(y - 20), canvas.width, canvas.height - px(y - 20));
-  ctx.fillStyle = 'rgb(10,31,61)';
-  ctx.font = `bold ${FS(12)}px ${FONT}`;
-  ctx.fillText('TERMS & CONDITIONS', px(M), px(y));
   y += 20;
-  ctx.font = `${FS(7.5)}px ${FONT}`;
-  ctx.fillStyle = 'rgb(50,60,80)';
-  const terms = [
-    '1. Payment of amount to be paid must be completed before pickup.',
-    '2. All goods are subject to inspection and customs clearance.',
-    '3. ATLAS EXPRESS SERVICE is not liable for delays due to force majeure.',
-    '4. Claims must be filed within 7 days of delivery.',
-    '5. Sender confirms accuracy of declared information.'
-  ];
-  terms.forEach(t => {
-    ctx.fillText(t, px(M), px(y));
-    y += 12;
-  });
-  ctx.fillText('Amount Due: ' + (s.amountToPay || 'N/A'), px(M), px(y + 10));
 
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'AtlasExpress-Invoice-' + s.id + '.jpg';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Invoice downloaded ✓', 'success');
-  }, 'image/jpeg', 0.92);
+  const sigW = (CW - 16) / 3;
+  drawSignature(p1.ctx, M, y, sigW, 'Manager', 'J. Franklin');
+  drawSignature(p1.ctx, M + sigW + 8, y, sigW, 'Sender', s.senderName);
+  drawSignature(p1.ctx, M + (sigW + 8) * 2, y, sigW, 'Security', 'M. Ortega');
+  y += 34;
+
+  const stampY = y + 13;
+  drawCircleStamp(p1.ctx, px(M + 22), px(stampY), px(15), 'LEGAL GOODS', 'CUSTOMS CLEARED', 'AE-LG-' + s.id.slice(-5), 'rgb(24,140,92)', -10);
+  drawCircleStamp(p1.ctx, px(PW / 2), px(stampY), px(15), 'SHIPPING APPROVAL', 'ATLAS EXPRESS', 'AE-SA-' + s.id.slice(-5), 'rgb(20,90,170)', 7);
+  drawCircleStamp(p1.ctx, px(PW - M - 22), px(stampY), px(15), 'SECURITY CHECKED', 'VERIFIED', 'AE-SC-' + s.id.slice(-5), 'rgb(178,58,58)', -6);
+
+  drawFooter(p1.ctx, 1);
+
+  /* ══════════════════════════ PAGE 2 — TERMS ══════════════════════════ */
+  const p2 = newPage();
+  drawHeader(p2.ctx, 'TERMS & CONDITIONS');
+  y = 46;
+  p2.ctx.textAlign = 'left';
+  p2.ctx.fillStyle = 'rgb(10,31,61)';
+  p2.ctx.font = `bold ${FS(13)}px ${FONT}`;
+  p2.ctx.fillText('TERMS & CONDITIONS OF CARRIAGE', px(M), px(y));
+  y += 4;
+  p2.ctx.strokeStyle = 'rgb(14,165,233)'; p2.ctx.lineWidth = px(0.6);
+  p2.ctx.beginPath(); p2.ctx.moveTo(px(M), px(y)); p2.ctx.lineTo(px(M + 50), px(y)); p2.ctx.stroke();
+  y += 12;
+
+  const terms = [
+    ['1. Payment Terms', 'Full payment of the amount stated on this invoice must be settled prior to pickup or final delivery, unless otherwise agreed in writing by ATLAS EXPRESS SERVICE.'],
+    ['2. Customs & Inspection', 'All goods are subject to inspection, valuation, and customs clearance by relevant authorities in the origin and destination countries. The sender is responsible for ensuring goods are legal for export and import.'],
+    ['3. Limitation of Liability', 'ATLAS EXPRESS SERVICE is not liable for delays, loss, or damage arising from causes beyond its reasonable control, including but not limited to weather, customs holds, strikes, or force majeure events.'],
+    ['4. Claims Procedure', 'Any claim relating to loss, damage, or delay must be submitted in writing within seven (7) calendar days of the scheduled or actual delivery date. Claims received after this period may not be honored.'],
+    ['5. Accuracy of Information', 'The sender warrants that all information provided, including item description, weight, declared value, and recipient details, is true, complete, and accurate. False declarations may result in delays, fines, or seizure of goods.'],
+    ['6. Prohibited Items', 'Shipments must not contain items prohibited by international shipping law or the customs regulations of the destination country. ATLAS EXPRESS SERVICE reserves the right to inspect and refuse any shipment.'],
+    ['7. Risk of Loss', 'Risk of loss or damage passes to the receiver upon confirmed delivery at the destination address stated on this invoice.'],
+    ['8. Governing Law', 'This agreement is governed by the shipping regulations applicable at the port of origin, without regard to conflict-of-law principles.'],
+  ];
+  terms.forEach(([head, body]) => {
+    p2.ctx.fillStyle = 'rgb(10,31,61)';
+    p2.ctx.font = `bold ${FS(8)}px ${FONT}`;
+    p2.ctx.fillText(head, px(M), px(y));
+    y += 6;
+    p2.ctx.fillStyle = 'rgb(55,65,85)';
+    p2.ctx.font = `${FS(7.2)}px ${FONT}`;
+    const lines = wrapText(p2.ctx, body, px(CW));
+    lines.forEach(line => { p2.ctx.fillText(line, px(M), px(y)); y += 5.4; });
+    y += 4;
+  });
+
+  y += 8;
+  p2.ctx.fillStyle = 'rgb(30,40,60)';
+  p2.ctx.font = `italic ${FS(7.6)}px ${FONT}`;
+  p2.ctx.fillText('By accepting this shipment, the sender and receiver acknowledge and agree to the terms above.', px(M), px(y));
+
+  drawCircleStamp(p2.ctx, px(PW - M - 26), px(PH - 46), px(18), 'APPROVED', 'TERMS ACCEPTED', 'AE-TC-' + s.id.slice(-5), 'rgb(24,140,92)', -12);
+
+  drawFooter(p2.ctx, 2);
+
+  /* ══════════════════════════ PAGE 3 — TIMELINE & PAYMENT ══════════════════════════ */
+  const p3 = newPage();
+  drawHeader(p3.ctx, 'TIMELINE & PAYMENT');
+  y = 46;
+  drawSectionTitle(p3.ctx, y, 'SHIPPING TIMELINE');
+  y += 11;
+
+  const curIdx = STAGES.indexOf(s.status);
+  const stageTimes = {};
+  (s.history || []).forEach(h => { if (STAGES.includes(h.status)) stageTimes[h.status] = h.time; });
+  if (!stageTimes['Shipment Created']) stageTimes['Shipment Created'] = s.created;
+
+  STAGES.forEach((stage, i) => {
+    const done = curIdx >= 0 && i <= curIdx;
+    p3.ctx.fillStyle = i % 2 === 0 ? 'rgb(247,251,255)' : 'rgb(255,255,255)';
+    p3.ctx.fillRect(px(M), px(y), px(CW), px(8.5));
+    p3.ctx.fillStyle = done ? 'rgb(14,165,233)' : 'rgb(175,185,200)';
+    p3.ctx.font = `${done ? 'bold ' : ''}${FS(7.8)}px ${FONT}`;
+    p3.ctx.textAlign = 'left';
+    p3.ctx.fillText((done ? '✓  ' : '○  ') + stage, px(M + 3), px(y + 5.8));
+    const t = stageTimes[stage];
+    p3.ctx.textAlign = 'right';
+    p3.ctx.fillStyle = 'rgb(120,130,150)'; p3.ctx.font = `${FS(6.4)}px ${FONT}`;
+    p3.ctx.fillText(t ? fmtDate(t) : (done ? '—' : 'Pending'), px(PW - M - 3), px(y + 5.6));
+    y += 8.5;
+  });
+  y += 10;
+
+  drawSectionTitle(p3.ctx, y, 'PAYMENT SUMMARY');
+  y += 11;
+  const declared = parseMoney(s.declaredValue);
+  const total = parseMoney(s.amountToPay);
+  let shipFee = null;
+  if (declared != null && total != null && total >= declared) shipFee = total - declared;
+
+  const rows = [
+    ['Subtotal (Declared Value)', declared != null ? fmtMoney(declared) : (s.declaredValue || 'N/A')],
+    ['Shipping & Handling Fee', shipFee != null ? fmtMoney(shipFee) : '—'],
+  ];
+  rows.forEach((r, i) => {
+    p3.ctx.fillStyle = i % 2 === 0 ? 'rgb(247,251,255)' : 'rgb(255,255,255)';
+    p3.ctx.fillRect(px(M), px(y), px(CW), px(8));
+    p3.ctx.fillStyle = 'rgb(70,85,105)'; p3.ctx.font = `${FS(7.6)}px ${FONT}`; p3.ctx.textAlign = 'left';
+    p3.ctx.fillText(r[0], px(M + 3), px(y + 5.4));
+    p3.ctx.fillStyle = 'rgb(10,31,61)'; p3.ctx.font = `bold ${FS(7.6)}px ${FONT}`; p3.ctx.textAlign = 'right';
+    p3.ctx.fillText(r[1], px(PW - M - 3), px(y + 5.4));
+    y += 8;
+  });
+
+  fillRR(p3.ctx, px(M), px(y + 2), px(CW), px(11), px(2), 'rgb(10,31,61)');
+  p3.ctx.fillStyle = '#ffffff'; p3.ctx.textAlign = 'left'; p3.ctx.font = `bold ${FS(8.4)}px ${FONT}`;
+  p3.ctx.fillText('TOTAL AMOUNT TO BE PAID', px(M + 4), px(y + 9.3));
+  p3.ctx.textAlign = 'right'; p3.ctx.font = `bold ${FS(11)}px ${FONT}`;
+  p3.ctx.fillText(total != null ? fmtMoney(total) : (s.amountToPay || 'N/A'), px(PW - M - 4), px(y + 9.3));
+  y += 28;
+
+  drawSignature(p3.ctx, M, y, 70, 'Manager', 'J. Franklin');
+  drawCircleStamp(p3.ctx, px(PW - M - 26), px(y - 6), px(16), 'SECURITY CHECKED', 'FINAL VERIFICATION', 'AE-FV-' + s.id.slice(-5), 'rgb(178,58,58)', 9);
+
+  drawFooter(p3.ctx, 3);
+
+  /* ══════════════════════════ ASSEMBLE 3-PAGE PDF ══════════════════════════ */
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  doc.addImage(p1.c.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, PW, PH);
+  doc.addPage();
+  doc.addImage(p2.c.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, PW, PH);
+  doc.addPage();
+  doc.addImage(p3.c.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, PW, PH);
+  doc.save('AtlasExpress-Invoice-' + s.id + '.pdf');
+  showToast('3-page invoice PDF downloaded ✓', 'success');
 }
 
 function esc(str) {
