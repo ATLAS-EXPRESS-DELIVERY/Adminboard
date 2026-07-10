@@ -6,7 +6,6 @@
 <title>ATLAS EXPRESS SERVICE — Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
@@ -413,6 +412,25 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
               <div class="detail-row"><span class="k">Special Notes</span><span class="v" id="d_notes">—</span></div>
               <div class="detail-row"><span class="k">Ready for Pickup</span><span class="v" id="d_pickup">—</span></div>
 
+              <div class="section-title">💰 Payment Management</div>
+              <div class="detail-row"><span class="k">Amount To Be Paid</span><span class="v" id="d_amountToPay">—</span></div>
+              <div class="detail-row"><span class="k">Amount Paid</span><span class="v" id="d_amountPaid">—</span></div>
+              <div class="detail-row"><span class="k">Balance Due</span><span class="v" id="d_balanceDue">—</span></div>
+              <div class="detail-row"><span class="k">Payment Status</span><span class="v"><span class="status-badge" id="d_paymentBadge">—</span></span></div>
+              <div class="detail-row"><span class="k">Payment Note</span><span class="v" id="d_paymentNote">—</span></div>
+
+              <div class="form-row" style="margin-top:12px;">
+                <div class="field-inline"><label>Amount To Be Paid (GBP)</label><input type="text" id="u_amountToPay" placeholder="£150"></div>
+                <div class="field-inline"><label>Amount Paid So Far (GBP)</label><input type="text" id="u_amountPaid" placeholder="£0"></div>
+              </div>
+              <div class="field-inline" style="margin-bottom:6px;">
+                <label>Payment Note (what this payment is for)</label>
+                <textarea id="u_paymentNote" placeholder="e.g. Balance covers customs clearance fee and final-mile delivery charge."></textarea>
+              </div>
+              <div class="actions-row">
+                <button class="btn btn-primary" onclick="updatePayment()">💾 Save Payment Info</button>
+              </div>
+
               <div class="section-title">🔄 Update Tracking</div>
               <div class="form-row">
                 <div class="field-inline">
@@ -435,7 +453,6 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
               <div class="actions-row">
                 <button class="btn btn-primary" onclick="addLocationUpdate()">Update Stage</button>
                 <button class="btn btn-green" onclick="downloadInvoice()">⬇ Download Invoice</button>
-                <button class="btn btn-outline" onclick="resendEmail()">📧 Resend Email</button>
                 <button class="btn btn-danger" onclick="deleteShipment()">🗑 Delete</button>
               </div>
 
@@ -452,31 +469,31 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
       <div class="tab-content" id="tab-create">
         <div class="panel">
           <h2>Create New Shipment</h2>
-          <div class="sub">Fill in all details. A tracking ID and customer tracking link will be auto-generated, and an email sent to the receiver.</div>
+          <div class="sub">Fill in all details. A tracking ID and customer tracking link will be auto-generated.</div>
 
           <div class="section-title">📤 Sender Information</div>
           <div class="form-row">
-            <div class="field-inline"><label>Sender Full Name *</label><input type="text" id="f_senderName" placeholder="e.g. John Adeyemi"></div>
+            <div class="field-inline"><label>Sender Full Name *</label><input type="text" id="f_senderName" placeholder="John Adeyemi"></div>
             <div class="field-inline"><label>Sender Phone *</label><input type="tel" id="f_senderPhone" placeholder="+234 800 000 0000"></div>
           </div>
           <div class="form-row">
             <div class="field-inline"><label>Sender Email *</label><input type="email" id="f_senderEmail" placeholder="sender@email.com"></div>
-            <div class="field-inline"><label>Sender Location / Address *</label><input type="text" id="f_origin" placeholder="e.g. Lagos, Nigeria"></div>
+            <div class="field-inline"><label>Sender Location / Address *</label><input type="text" id="f_origin" placeholder="Lagos, Nigeria"></div>
           </div>
 
           <div class="section-title">📥 Receiver Information</div>
           <div class="form-row">
-            <div class="field-inline"><label>Receiver Full Name *</label><input type="text" id="f_receiverName" placeholder="e.g. James Smith"></div>
+            <div class="field-inline"><label>Receiver Full Name *</label><input type="text" id="f_receiverName" placeholder="James Smith"></div>
             <div class="field-inline"><label>Receiver Phone *</label><input type="tel" id="f_receiverPhone" placeholder="+44 7700 000000"></div>
           </div>
           <div class="form-row">
             <div class="field-inline"><label>Receiver Email *</label><input type="email" id="f_receiverEmail" placeholder="receiver@email.com"></div>
-            <div class="field-inline"><label>Receiver Location / Address *</label><input type="text" id="f_destination" placeholder="e.g. London, UK"></div>
+            <div class="field-inline"><label>Receiver Location / Address *</label><input type="text" id="f_destination" placeholder="London, UK"></div>
           </div>
 
           <div class="section-title">📦 Goods & Shipment Information</div>
           <div class="form-row">
-            <div class="field-inline"><label>Goods Description *</label><input type="text" id="f_goods" placeholder="e.g. Electronic devices, clothing…"></div>
+            <div class="field-inline"><label>Goods Description *</label><input type="text" id="f_goods" placeholder="Electronic devices, clothing…"></div>
             <div class="field-inline"><label>Item Type *</label>
               <select id="f_itemType">
                 <option value="">— Select type —</option>
@@ -496,10 +513,10 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
             </div>
           </div>
           <div class="form-row-3">
-            <div class="field-inline"><label>Weight (kg) *</label><input type="text" id="f_weight" placeholder="e.g. 3.2 kg"></div>
-            <div class="field-inline"><label>Quantity</label><input type="text" id="f_quantity" placeholder="e.g. 2 boxes"></div>
-            <div class="field-inline"><label>Declared Value (USD)</label><input type="text" id="f_value" placeholder="e.g. $500"></div>
-            <div class="field-inline"><label>Amount to be Paid (USD) *</label><input type="text" id="f_amount" placeholder="e.g. $150"></div>
+            <div class="field-inline"><label>Weight (kg) *</label><input type="text" id="f_weight" placeholder="3.2 kg"></div>
+            <div class="field-inline"><label>Quantity</label><input type="text" id="f_quantity" placeholder="2 boxes"></div>
+            <div class="field-inline"><label>Declared Value (GBP)</label><input type="text" id="f_value" placeholder="£500"></div>
+            <div class="field-inline"><label>Amount to be Paid (GBP) *</label><input type="text" id="f_amount" placeholder="£150"></div>
           </div>
           <div class="form-row">
             <div class="field-inline"><label>Date Shipped *</label><input type="date" id="f_dateShipped"></div>
@@ -522,7 +539,7 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
           </div>
           <div class="field-inline" style="margin-bottom:20px;">
             <label>Special Notes / Instructions</label>
-            <textarea id="f_notes" placeholder="e.g. Fragile — handle with care. Keep refrigerated."></textarea>
+            <textarea id="f_notes" placeholder="Fragile — handle with care. Keep refrigerated."></textarea>
           </div>
 
           <button class="btn btn-primary" style="width:auto;padding:14px 28px;" id="createBtn" onclick="createShipment()">
@@ -640,6 +657,12 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
           <button class="btn btn-primary" onclick="saveTrackBaseUrl()">Save URL</button>
           <div class="pwd-status ok" id="trackUrlOk" style="color:var(--green);">✅ Saved.</div>
         </div>
+
+        <div class="panel" style="max-width:500px;">
+          <h2>Reset Data</h2>
+          <div class="sub">Permanently delete every shipment currently stored in the backend. This cannot be undone.</div>
+          <button class="btn btn-danger" onclick="clearAllShipments()">🗑 Delete All Shipments</button>
+        </div>
       </div>
     </main>
   </div>
@@ -651,13 +674,9 @@ main{flex:1;max-width:1300px;width:100%;margin:0 auto;padding:26px 24px 60px;}
 // ═══════════════════════════════════════════════════
 // CONFIG — CREDENTIALS
 // ═══════════════════════════════════════════════════
-const JSONBIN_BIN_ID    = '6a4c8196da38895dfe38dad5';
-const JSONBIN_MASTER_KEY= '$2a$10$ZV9eFg0xbLWjpDRBeeuyhe7TOcZ.Ru2nDPWfoMnYnDvIjNR7Hzlfa';
+const JSONBIN_BIN_ID    = '6a504daaf5f4af5e297a64c8';
+const JSONBIN_MASTER_KEY= '$2a$10$HAkKYldNteLU88hcedQVK.GlW8/VQnC1HntBdSHSDyK8ziHgidq4y';
 const JSONBIN_BASE       = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
-
-const EJS_PUBLIC_KEY    = 'upQoI23DRdOWdZQfk';
-const EJS_SERVICE_ID    = 'service_96nfk5d';
-const EJS_TEMPLATE_ID   = 'template_b75pm4q';
 
 const SESSION_KEY = 'gd_admin_session';
 const CREDS_KEY   = 'gd_admin_creds';
@@ -666,8 +685,6 @@ const TRACK_URL_KEY = 'gd_track_base_url';
 // 9-stage customer-facing tracking journey
 const STAGES = ['Shipment Created','Picked Up','Warehouse','Airport','Customs',
   'Destination Country','Local Distribution','Out for Delivery','Delivered'];
-
-emailjs.init({ publicKey: EJS_PUBLIC_KEY });
 
 function getTrackBaseUrl() {
   return localStorage.getItem(TRACK_URL_KEY) ||
@@ -718,12 +735,22 @@ function logout() {
   document.getElementById('adminShell').style.display = 'none';
   document.getElementById('password').value = '';
 }
-function showAdmin() {
+const FRESH_START_KEY = 'gd_fresh_start_20260710';
+async function freshStartIfNeeded() {
+  if (localStorage.getItem(FRESH_START_KEY)) return;
+  try {
+    await saveBin({ shipments: {} });
+    localStorage.setItem(FRESH_START_KEY, '1');
+  } catch (e) { /* will retry next login if it fails */ }
+}
+
+async function showAdmin() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('adminShell').style.display = 'block';
   document.getElementById('currentUser').textContent = getCreds().user;
   document.getElementById('settingsUser').textContent = getCreds().user;
   document.getElementById('trackBaseUrl').value = getTrackBaseUrl();
+  await freshStartIfNeeded();
   loadShipments();
 }
 document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
@@ -864,6 +891,8 @@ async function createShipment() {
     quantity     : get('f_quantity') || '1',
     declaredValue: get('f_value') || 'N/A',
     amountToPay  : get('f_amount') || 'N/A',
+    amountPaid   : '£0',
+    paymentNote  : '',
     dateShipped  : get('f_dateShipped'),
     eta          : get('f_eta'),
     status       : initialStage,
@@ -885,7 +914,6 @@ async function createShipment() {
     updateStats();
     renderDashboard();
     showToast('Shipment created: ' + id, 'success');
-    sendEmailNotification(shipment);
   } catch(e) {
     showToast('Error saving shipment. Please try again.', 'error');
   }
@@ -921,34 +949,6 @@ function copyTrackLink(inputId) {
 }
 function openTrackLink() {
   window.open(document.getElementById('newTrackLink').value, '_blank');
-}
-
-function sendEmailNotification(s) {
-  const link = buildTrackLink(s.id);
-  emailjs.send(EJS_SERVICE_ID, EJS_TEMPLATE_ID, {
-    to_name      : s.receiverName,
-    to_email     : s.receiverEmail,
-    tracking_id  : s.id,
-    tracking_link: link,
-    sender_name  : s.senderName,
-    sender_phone : s.senderPhone,
-    sender_email : s.senderEmail,
-    origin       : s.origin,
-    destination  : s.destination,
-    goods        : s.goods,
-    weight       : s.weight,
-    date_shipped : fmtDateOnly(s.dateShipped),
-    eta          : fmtDateOnly(s.eta),
-    status       : s.status,
-    receiver_phone: s.receiverPhone,
-    service      : s.service,
-  })
-  .then(() => showToast('📧 Email notification sent to receiver!', 'success'))
-  .catch(() => showToast('Email sending failed — check EmailJS setup.', 'error'));
-}
-function resendEmail() {
-  const s = allShipments[selectedId];
-  if (s) sendEmailNotification(s);
 }
 
 function updateStats() {
@@ -1027,6 +1027,22 @@ async function deleteShipmentCard(id) {
   }
 }
 
+async function clearAllShipments() {
+  if (!confirm('Delete ALL shipments? This cannot be undone.')) return;
+  allShipments = {};
+  selectedId = null;
+  renderList();
+  renderDetail();
+  updateStats();
+  renderDashboard();
+  showToast('All shipments deleted.', 'info');
+  try {
+    await saveBin({ shipments: {} });
+  } catch (e) {
+    showToast('Cleared locally, but failed to sync — check connection.', 'error');
+  }
+}
+
 function filterShipments(q) { renderList(q); }
 
 function selectShipment(id) {
@@ -1071,6 +1087,24 @@ function renderDetail() {
   setText('d_eta',          fmtDateOnly(s.eta));
   setText('d_notes',        s.notes || '—');
   setText('d_pickup',       s.readyForPickup ? '✅ Yes' : 'No');
+
+  const totalAmt = parseMoney(s.amountToPay);
+  const paidAmt  = parseMoney(s.amountPaid) || 0;
+  const balance  = totalAmt != null ? Math.max(totalAmt - paidAmt, 0) : null;
+  const payStatus = (totalAmt != null && totalAmt > 0 && paidAmt >= totalAmt) ? 'Paid'
+    : (paidAmt > 0 ? 'Partial' : 'Unpaid');
+
+  setText('d_amountToPay', s.amountToPay || 'N/A');
+  setText('d_amountPaid',  fmtMoney(paidAmt));
+  setText('d_balanceDue',  balance != null ? fmtMoney(balance) : 'N/A');
+  const payBadge = document.getElementById('d_paymentBadge');
+  payBadge.textContent = payStatus;
+  payBadge.className = 'status-badge ' + (payStatus === 'Paid' ? 'delivered' : payStatus === 'Partial' ? 'customs' : 'pending');
+  setText('d_paymentNote', s.paymentNote || '—');
+
+  document.getElementById('u_amountToPay').value = (s.amountToPay && s.amountToPay !== 'N/A') ? s.amountToPay : '';
+  document.getElementById('u_amountPaid').value  = (s.amountPaid && s.amountPaid !== '£0') ? s.amountPaid : '';
+  document.getElementById('u_paymentNote').value = s.paymentNote || '';
 
   document.getElementById('u_location').value = '';
   document.getElementById('u_note').value = '';
@@ -1137,6 +1171,26 @@ async function addLocationUpdate() {
     showToast('Tracking updated to "' + status + '" ✓', 'success');
   } catch(e) {
     showToast('Error saving update.', 'error');
+  }
+}
+
+async function updatePayment() {
+  if (!selectedId) return;
+  const s = allShipments[selectedId];
+  if (!s) return;
+  const amountToPay = document.getElementById('u_amountToPay').value.trim();
+  const amountPaid  = document.getElementById('u_amountPaid').value.trim();
+  const paymentNote = document.getElementById('u_paymentNote').value.trim();
+  s.amountToPay = amountToPay || s.amountToPay || 'N/A';
+  s.amountPaid  = amountPaid || '£0';
+  s.paymentNote = paymentNote;
+  try {
+    await saveBin({ shipments: allShipments });
+    renderDetail();
+    renderList(document.querySelector('#tab-shipments .search-bar').value);
+    showToast('Payment info updated ✓', 'success');
+  } catch(e) {
+    showToast('Error saving payment update.', 'error');
   }
 }
 
@@ -1316,6 +1370,17 @@ async function generateInvoice(s) {
   }
   try { await document.fonts.load('700 40px Caveat'); await document.fonts.load('600 24px Caveat'); } catch (e) {}
 
+  let qrImg = null;
+  try {
+    qrImg = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=4&data=' + encodeURIComponent(buildTrackLink(s.id));
+    });
+  } catch (e) { qrImg = null; }
+
   const SCALE = 4;                       // px per "mm"
   const PW = 210, PH = 297, M = 16, CW = PW - M * 2;
   const px = mm => mm * SCALE;
@@ -1356,26 +1421,38 @@ async function generateInvoice(s) {
     fillRR(ctx, px(M), px(8), px(17), px(17), px(3), 'rgb(14,165,233)');
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
-    ctx.font = `bold ${FS(11)}px ${FONT}`;
+    ctx.font = `bold ${FS(12.4)}px ${FONT}`;
     ctx.fillText('AE', px(M + 8.5), px(19.5));
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold ${FS(15)}px ${FONT}`;
-    ctx.fillText('ATLAS EXPRESS SERVICE', px(M + 22), px(15.5));
+    ctx.fillText('ATLAS EXPRESS SERVICE', px(M + 22), px(14.3));
     ctx.font = `${FS(7.2)}px ${FONT}`;
     ctx.fillStyle = 'rgb(180,210,240)';
-    ctx.fillText('✈  ALWAYS AT YOUR SERVICE  ✈', px(M + 22), px(21.5));
-    ctx.fillText('506 S Spring St #13308, Los Angeles, CA 90013, USA  ·  info.guaranteeshipping@gmail.com', px(M + 22), px(27.5));
+    ctx.fillText('✈  ALWAYS AT YOUR SERVICE  ✈', px(M + 22), px(19));
+    ctx.fillText('Unit 12 Heron Avenue, Wickford, Essex, SS11 8DL', px(M + 22), px(23.7));
+    ctx.fillText('atlasexpressserviceuk@gmail.com  ·  +44 7727 495347', px(M + 22), px(28.4));
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${FS(11)}px ${FONT}`;
-    ctx.fillText(pageLabel, px(PW - M), px(15.5));
+    ctx.font = `bold ${FS(11.5)}px ${FONT}`;
+    ctx.fillText(pageLabel, px(PW - M - 24), px(14.3));
     ctx.font = `${FS(6.8)}px ${FONT}`;
     ctx.fillStyle = 'rgb(180,210,240)';
-    ctx.fillText('Tracking ID: ' + s.id, px(PW - M), px(21.5));
-    ctx.fillText('Issued: ' + new Date().toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }), px(PW - M), px(27.5));
+    ctx.fillText('Tracking ID: ' + s.id, px(PW - M - 24), px(19));
+    ctx.fillText('Issued: ' + new Date().toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }), px(PW - M - 24), px(23.7));
+
+    /* QR code — printed in the top-right corner of every page */
+    const qrSize = 20, qrX = PW - M - qrSize, qrY = 6;
+    fillRR(ctx, px(qrX), px(qrY), px(qrSize), px(qrSize), px(1.5), '#ffffff');
+    if (qrImg) {
+      try { ctx.drawImage(qrImg, px(qrX + 1.3), px(qrY + 1.3), px(qrSize - 2.6), px(qrSize - 2.6)); } catch (e) {}
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgb(200,222,245)';
+    ctx.font = `${FS(5.2)}px ${FONT}`;
+    ctx.fillText('SCAN TO TRACK', px(qrX + qrSize / 2), px(qrY + qrSize + 4));
   }
 
   function drawFooter(ctx, pageNum) {
@@ -1387,17 +1464,17 @@ async function generateInvoice(s) {
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgb(120,135,155)';
-    ctx.font = `${FS(6.2)}px ${FONT}`;
+    ctx.font = `${FS(7)}px ${FONT}`;
     ctx.fillText('Track online: ' + buildTrackLink(s.id), px(PW / 2), px(PH - 11));
     ctx.fillText('This is an official shipping document issued by ATLAS EXPRESS SERVICE  ·  Page ' + pageNum + ' of 3', px(PW / 2), px(PH - 6.5));
   }
 
   function drawSectionTitle(ctx, y, text) {
-    fillRR(ctx, px(M), px(y), px(CW), px(7.5), px(1.5), 'rgb(10,31,61)');
+    fillRR(ctx, px(M), px(y), px(CW), px(8.6), px(1.5), 'rgb(10,31,61)');
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
-    ctx.font = `bold ${FS(8)}px ${FONT}`;
-    ctx.fillText(text, px(M + 3.5), px(y + 5.3));
+    ctx.font = `bold ${FS(9.4)}px ${FONT}`;
+    ctx.fillText(text, px(M + 3.5), px(y + 6.1));
   }
 
   function drawStar(ctx, cx, cy, r, color) {
@@ -1449,10 +1526,10 @@ async function generateInvoice(s) {
   function drawSignature(ctx, x, y, w, role, name) {
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgb(10,31,61)';
-    ctx.font = `bold ${FS(6.6)}px ${FONT}`;
+    ctx.font = `bold ${FS(7.6)}px ${FONT}`;
     ctx.fillText(role.toUpperCase(), px(x), px(y));
     ctx.fillStyle = 'rgb(30,40,60)';
-    ctx.font = `${FS(16)}px ${SIGFONT}`;
+    ctx.font = `${FS(17.5)}px ${SIGFONT}`;
     ctx.textAlign = 'center';
     ctx.fillText(name, px(x + w / 2), px(y + 13));
     ctx.strokeStyle = 'rgb(120,135,155)';
@@ -1463,7 +1540,7 @@ async function generateInvoice(s) {
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgb(120,135,155)';
-    ctx.font = `${FS(5.8)}px ${FONT}`;
+    ctx.font = `${FS(6.6)}px ${FONT}`;
     ctx.fillText('Authorized Signature', px(x + w / 2), px(y + 21.5));
   }
 
@@ -1490,7 +1567,7 @@ async function generateInvoice(s) {
     return isNaN(n) ? null : n;
   }
   function fmtMoney(n) {
-    return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '£' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   /* ══════════════════════════ PAGE 1 — INVOICE ══════════════════════════ */
@@ -1500,7 +1577,7 @@ async function generateInvoice(s) {
 
   fillRR(p1.ctx, px(M), px(y), px(CW), px(9), px(2), 'rgb(14,165,233)');
   p1.ctx.fillStyle = '#ffffff'; p1.ctx.textAlign = 'center';
-  p1.ctx.font = `bold ${FS(10)}px ${FONT}`;
+  p1.ctx.font = `bold ${FS(11.5)}px ${FONT}`;
   p1.ctx.fillText('TRACKING ID: ' + s.id, px(PW / 2), px(y + 6.2));
   y += 15;
 
@@ -1508,52 +1585,52 @@ async function generateInvoice(s) {
   fillRR(p1.ctx, px(col1x), px(y), px(colW), px(38), px(2), 'rgb(247,251,255)');
   strokeRR(p1.ctx, px(col1x), px(y), px(colW), px(38), px(2), 'rgb(26,63,114)', px(0.35));
   p1.ctx.textAlign = 'left'; p1.ctx.fillStyle = 'rgb(10,31,61)';
-  p1.ctx.font = `bold ${FS(7.6)}px ${FONT}`;
+  p1.ctx.font = `bold ${FS(8.8)}px ${FONT}`;
   p1.ctx.fillText('SENDER DETAILS', px(col1x + 4), px(y + 6.5));
-  p1.ctx.font = `${FS(7.4)}px ${FONT}`; p1.ctx.fillStyle = 'rgb(40,55,80)';
+  p1.ctx.font = `${FS(8.6)}px ${FONT}`; p1.ctx.fillStyle = 'rgb(40,55,80)';
   [['Name', s.senderName], ['Phone', s.senderPhone], ['Email', s.senderEmail], ['Origin', s.origin]].forEach((r, i) => {
-    p1.ctx.fillText(r[0] + ':  ' + r[1], px(col1x + 4), px(y + 13.5 + i * 6));
+    p1.ctx.fillText(r[0] + ':  ' + r[1], px(col1x + 4), px(y + 13.5 + i * 6.6));
   });
 
   fillRR(p1.ctx, px(col2x), px(y), px(colW), px(38), px(2), 'rgb(240,249,255)');
   strokeRR(p1.ctx, px(col2x), px(y), px(colW), px(38), px(2), 'rgb(14,165,233)', px(0.35));
   p1.ctx.fillStyle = 'rgb(10,31,61)';
-  p1.ctx.font = `bold ${FS(7.6)}px ${FONT}`;
+  p1.ctx.font = `bold ${FS(8.8)}px ${FONT}`;
   p1.ctx.fillText('RECEIVER DETAILS', px(col2x + 4), px(y + 6.5));
-  p1.ctx.font = `${FS(7.4)}px ${FONT}`; p1.ctx.fillStyle = 'rgb(40,55,80)';
+  p1.ctx.font = `${FS(8.6)}px ${FONT}`; p1.ctx.fillStyle = 'rgb(40,55,80)';
   [['Name', s.receiverName], ['Phone', s.receiverPhone], ['Email', s.receiverEmail], ['Destination', s.destination]].forEach((r, i) => {
-    p1.ctx.fillText(r[0] + ':  ' + r[1], px(col2x + 4), px(y + 13.5 + i * 6));
+    p1.ctx.fillText(r[0] + ':  ' + r[1], px(col2x + 4), px(y + 13.5 + i * 6.6));
   });
 
   y += 46;
   drawSectionTitle(p1.ctx, y, 'SHIPMENT DETAILS');
-  y += 10.5;
-  fillRR(p1.ctx, px(M), px(y), px(CW), px(7), px(1.5), 'rgb(186,224,247)');
-  p1.ctx.fillStyle = 'rgb(10,31,61)'; p1.ctx.font = `bold ${FS(6.8)}px ${FONT}`;
+  y += 11;
+  fillRR(p1.ctx, px(M), px(y), px(CW), px(8), px(1.5), 'rgb(186,224,247)');
+  p1.ctx.fillStyle = 'rgb(10,31,61)'; p1.ctx.font = `bold ${FS(8)}px ${FONT}`;
   p1.ctx.textAlign = 'left';
-  p1.ctx.fillText('DESCRIPTION', px(M + 3), px(y + 4.8));
-  p1.ctx.fillText('WEIGHT', px(M + CW * 0.48), px(y + 4.8));
-  p1.ctx.fillText('QTY', px(M + CW * 0.65), px(y + 4.8));
-  p1.ctx.fillText('DECLARED VALUE', px(M + CW * 0.78), px(y + 4.8));
-  y += 8;
+  p1.ctx.fillText('DESCRIPTION', px(M + 3), px(y + 5.4));
+  p1.ctx.fillText('WEIGHT', px(M + CW * 0.48), px(y + 5.4));
+  p1.ctx.fillText('QTY', px(M + CW * 0.65), px(y + 5.4));
+  p1.ctx.fillText('DECLARED VALUE', px(M + CW * 0.78), px(y + 5.4));
+  y += 9;
   p1.ctx.fillStyle = '#ffffff';
-  p1.ctx.fillRect(px(M), px(y), px(CW), px(8));
+  p1.ctx.fillRect(px(M), px(y), px(CW), px(9));
   p1.ctx.strokeStyle = 'rgb(224,232,242)'; p1.ctx.lineWidth = px(0.25);
-  p1.ctx.strokeRect(px(M), px(y), px(CW), px(8));
-  p1.ctx.fillStyle = 'rgb(20,30,50)'; p1.ctx.font = `${FS(7.4)}px ${FONT}`;
-  p1.ctx.fillText(s.goods, px(M + 3), px(y + 5.4));
-  p1.ctx.fillText(String(s.weight), px(M + CW * 0.48), px(y + 5.4));
-  p1.ctx.fillText(String(s.quantity || '1'), px(M + CW * 0.65), px(y + 5.4));
-  p1.ctx.fillText(String(s.declaredValue || 'N/A'), px(M + CW * 0.78), px(y + 5.4));
-  y += 8 + 6;
+  p1.ctx.strokeRect(px(M), px(y), px(CW), px(9));
+  p1.ctx.fillStyle = 'rgb(20,30,50)'; p1.ctx.font = `${FS(8.6)}px ${FONT}`;
+  p1.ctx.fillText(s.goods, px(M + 3), px(y + 6.1));
+  p1.ctx.fillText(String(s.weight), px(M + CW * 0.48), px(y + 6.1));
+  p1.ctx.fillText(String(s.quantity || '1'), px(M + CW * 0.65), px(y + 6.1));
+  p1.ctx.fillText(String(s.declaredValue || 'N/A'), px(M + CW * 0.78), px(y + 6.1));
+  y += 9 + 6;
 
   drawSectionTitle(p1.ctx, y, 'TRACKING INFORMATION');
-  y += 10.5;
-  p1.ctx.fillStyle = 'rgb(30,45,70)'; p1.ctx.font = `${FS(7.4)}px ${FONT}`;
+  y += 11;
+  p1.ctx.fillStyle = 'rgb(30,45,70)'; p1.ctx.font = `${FS(8.6)}px ${FONT}`;
   p1.ctx.fillText('Service Type:  ' + (s.service || '—'), px(M + 2), px(y));
-  p1.ctx.fillText('Date Shipped:  ' + fmtDateOnly(s.dateShipped), px(M + 2), px(y + 7));
-  p1.ctx.fillText('Expected Delivery:  ' + fmtDateOnly(s.eta), px(M + 2), px(y + 14));
-  p1.ctx.fillText('Current Stage:  ' + s.status, px(M + 2), px(y + 21));
+  p1.ctx.fillText('Date Shipped:  ' + fmtDateOnly(s.dateShipped), px(M + 2), px(y + 7.8));
+  p1.ctx.fillText('Expected Delivery:  ' + fmtDateOnly(s.eta), px(M + 2), px(y + 15.6));
+  p1.ctx.fillText('Current Stage:  ' + s.status, px(M + 2), px(y + 23.4));
 
   const bx = M + CW * 0.55, bw = CW * 0.45;
   fillRR(p1.ctx, px(bx), px(y - 4), px(bw), px(22), px(1.5), 'rgb(247,250,253)');
@@ -1568,17 +1645,17 @@ async function generateInvoice(s) {
     p1.ctx.lineTo(px(bxi), px(y + 14));
     p1.ctx.stroke();
   }
-  p1.ctx.textAlign = 'center'; p1.ctx.fillStyle = 'rgb(90,100,120)'; p1.ctx.font = `${FS(5.4)}px ${FONT}`;
+  p1.ctx.textAlign = 'center'; p1.ctx.fillStyle = 'rgb(90,100,120)'; p1.ctx.font = `${FS(6.2)}px ${FONT}`;
   p1.ctx.fillText(s.id, px(bx + bw / 2), px(y + 19));
 
-  y += 30;
+  y += 33;
 
   const isDelivered = s.status === 'Delivered';
   const isTransit   = !isDelivered && s.status !== 'Shipment Created';
   const bannerColor = isDelivered ? 'rgb(26,163,122)' : isTransit ? 'rgb(10,31,61)' : 'rgb(74,96,128)';
-  fillRR(p1.ctx, px(M), px(y), px(CW), px(10), px(2), bannerColor);
-  p1.ctx.fillStyle = '#ffffff'; p1.ctx.textAlign = 'center'; p1.ctx.font = `bold ${FS(8.5)}px ${FONT}`;
-  p1.ctx.fillText('CURRENT STAGE: ' + s.status.toUpperCase(), px(PW / 2), px(y + 6.8));
+  fillRR(p1.ctx, px(M), px(y), px(CW), px(11), px(2), bannerColor);
+  p1.ctx.fillStyle = '#ffffff'; p1.ctx.textAlign = 'center'; p1.ctx.font = `bold ${FS(9.8)}px ${FONT}`;
+  p1.ctx.fillText('CURRENT STAGE: ' + s.status.toUpperCase(), px(PW / 2), px(y + 7.4));
 
   if (isDelivered) {
     p1.ctx.save();
@@ -1612,12 +1689,12 @@ async function generateInvoice(s) {
   y = 46;
   p2.ctx.textAlign = 'left';
   p2.ctx.fillStyle = 'rgb(10,31,61)';
-  p2.ctx.font = `bold ${FS(13)}px ${FONT}`;
+  p2.ctx.font = `bold ${FS(14.5)}px ${FONT}`;
   p2.ctx.fillText('TERMS & CONDITIONS OF CARRIAGE', px(M), px(y));
-  y += 4;
+  y += 5;
   p2.ctx.strokeStyle = 'rgb(14,165,233)'; p2.ctx.lineWidth = px(0.6);
   p2.ctx.beginPath(); p2.ctx.moveTo(px(M), px(y)); p2.ctx.lineTo(px(M + 50), px(y)); p2.ctx.stroke();
-  y += 12;
+  y += 13;
 
   const terms = [
     ['1. Payment Terms', 'Full payment of the amount stated on this invoice must be settled prior to pickup or final delivery, unless otherwise agreed in writing by ATLAS EXPRESS SERVICE.'],
@@ -1631,19 +1708,19 @@ async function generateInvoice(s) {
   ];
   terms.forEach(([head, body]) => {
     p2.ctx.fillStyle = 'rgb(10,31,61)';
-    p2.ctx.font = `bold ${FS(8)}px ${FONT}`;
+    p2.ctx.font = `bold ${FS(9.2)}px ${FONT}`;
     p2.ctx.fillText(head, px(M), px(y));
-    y += 6;
+    y += 6.6;
     p2.ctx.fillStyle = 'rgb(55,65,85)';
-    p2.ctx.font = `${FS(7.2)}px ${FONT}`;
+    p2.ctx.font = `${FS(8.2)}px ${FONT}`;
     const lines = wrapText(p2.ctx, body, px(CW));
-    lines.forEach(line => { p2.ctx.fillText(line, px(M), px(y)); y += 5.4; });
+    lines.forEach(line => { p2.ctx.fillText(line, px(M), px(y)); y += 6; });
     y += 4;
   });
 
   y += 8;
   p2.ctx.fillStyle = 'rgb(30,40,60)';
-  p2.ctx.font = `italic ${FS(7.6)}px ${FONT}`;
+  p2.ctx.font = `italic ${FS(8)}px ${FONT}`;
   p2.ctx.fillText('By accepting this shipment, the sender and receiver acknowledge and agree to the terms above.', px(M), px(y));
 
   drawCircleStamp(p2.ctx, px(PW - M - 26), px(PH - 46), px(18), 'APPROVED', 'TERMS ACCEPTED', 'AE-TC-' + s.id.slice(-5), 'rgb(24,140,92)', -12);
@@ -1665,16 +1742,16 @@ async function generateInvoice(s) {
   STAGES.forEach((stage, i) => {
     const done = curIdx >= 0 && i <= curIdx;
     p3.ctx.fillStyle = i % 2 === 0 ? 'rgb(247,251,255)' : 'rgb(255,255,255)';
-    p3.ctx.fillRect(px(M), px(y), px(CW), px(8.5));
+    p3.ctx.fillRect(px(M), px(y), px(CW), px(9.6));
     p3.ctx.fillStyle = done ? 'rgb(14,165,233)' : 'rgb(175,185,200)';
-    p3.ctx.font = `${done ? 'bold ' : ''}${FS(7.8)}px ${FONT}`;
+    p3.ctx.font = `${done ? 'bold ' : ''}${FS(9)}px ${FONT}`;
     p3.ctx.textAlign = 'left';
-    p3.ctx.fillText((done ? '✓  ' : '○  ') + stage, px(M + 3), px(y + 5.8));
+    p3.ctx.fillText((done ? '✓  ' : '○  ') + stage, px(M + 3), px(y + 6.6));
     const t = stageTimes[stage];
     p3.ctx.textAlign = 'right';
-    p3.ctx.fillStyle = 'rgb(120,130,150)'; p3.ctx.font = `${FS(6.4)}px ${FONT}`;
-    p3.ctx.fillText(t ? fmtDate(t) : (done ? '—' : 'Pending'), px(PW - M - 3), px(y + 5.6));
-    y += 8.5;
+    p3.ctx.fillStyle = 'rgb(120,130,150)'; p3.ctx.font = `${FS(7.4)}px ${FONT}`;
+    p3.ctx.fillText(t ? fmtDate(t) : (done ? '—' : 'Pending'), px(PW - M - 3), px(y + 6.4));
+    y += 9.6;
   });
   y += 10;
 
@@ -1691,20 +1768,20 @@ async function generateInvoice(s) {
   ];
   rows.forEach((r, i) => {
     p3.ctx.fillStyle = i % 2 === 0 ? 'rgb(247,251,255)' : 'rgb(255,255,255)';
-    p3.ctx.fillRect(px(M), px(y), px(CW), px(8));
-    p3.ctx.fillStyle = 'rgb(70,85,105)'; p3.ctx.font = `${FS(7.6)}px ${FONT}`; p3.ctx.textAlign = 'left';
-    p3.ctx.fillText(r[0], px(M + 3), px(y + 5.4));
-    p3.ctx.fillStyle = 'rgb(10,31,61)'; p3.ctx.font = `bold ${FS(7.6)}px ${FONT}`; p3.ctx.textAlign = 'right';
-    p3.ctx.fillText(r[1], px(PW - M - 3), px(y + 5.4));
-    y += 8;
+    p3.ctx.fillRect(px(M), px(y), px(CW), px(9.2));
+    p3.ctx.fillStyle = 'rgb(70,85,105)'; p3.ctx.font = `${FS(8.8)}px ${FONT}`; p3.ctx.textAlign = 'left';
+    p3.ctx.fillText(r[0], px(M + 3), px(y + 6.2));
+    p3.ctx.fillStyle = 'rgb(10,31,61)'; p3.ctx.font = `bold ${FS(8.8)}px ${FONT}`; p3.ctx.textAlign = 'right';
+    p3.ctx.fillText(r[1], px(PW - M - 3), px(y + 6.2));
+    y += 9.2;
   });
 
-  fillRR(p3.ctx, px(M), px(y + 2), px(CW), px(11), px(2), 'rgb(10,31,61)');
-  p3.ctx.fillStyle = '#ffffff'; p3.ctx.textAlign = 'left'; p3.ctx.font = `bold ${FS(8.4)}px ${FONT}`;
-  p3.ctx.fillText('TOTAL AMOUNT TO BE PAID', px(M + 4), px(y + 9.3));
-  p3.ctx.textAlign = 'right'; p3.ctx.font = `bold ${FS(11)}px ${FONT}`;
-  p3.ctx.fillText(total != null ? fmtMoney(total) : (s.amountToPay || 'N/A'), px(PW - M - 4), px(y + 9.3));
-  y += 28;
+  fillRR(p3.ctx, px(M), px(y + 2), px(CW), px(12.4), px(2), 'rgb(10,31,61)');
+  p3.ctx.fillStyle = '#ffffff'; p3.ctx.textAlign = 'left'; p3.ctx.font = `bold ${FS(9.6)}px ${FONT}`;
+  p3.ctx.fillText('TOTAL AMOUNT TO BE PAID', px(M + 4), px(y + 10.1));
+  p3.ctx.textAlign = 'right'; p3.ctx.font = `bold ${FS(12.6)}px ${FONT}`;
+  p3.ctx.fillText(total != null ? fmtMoney(total) : (s.amountToPay || 'N/A'), px(PW - M - 4), px(y + 10.1));
+  y += 30;
 
   drawSignature(p3.ctx, M, y, 70, 'Manager', 'J. Franklin');
   drawCircleStamp(p3.ctx, px(PW - M - 26), px(y - 6), px(16), 'SECURITY CHECKED', 'FINAL VERIFICATION', 'AE-FV-' + s.id.slice(-5), 'rgb(178,58,58)', 9);
@@ -1727,6 +1804,15 @@ function esc(str) {
   const d = document.createElement('div');
   d.textContent = str || '';
   return d.innerHTML;
+}
+function parseMoney(str) {
+  if (str == null) return null;
+  const n = parseFloat(String(str).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? null : n;
+}
+function fmtMoney(n) {
+  if (n == null || isNaN(n)) return 'N/A';
+  return '£' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function setText(id, val) {
   const el = document.getElementById(id);
