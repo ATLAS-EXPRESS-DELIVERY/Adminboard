@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ATLAS EXPRESS SERVICE — Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--navy:#0a1f3d;--blue:#0ea5e9;--light:#f0f7ff;--border:#b0cfea;--slate:#4a6080;--green:#1aa37a;--red:#b23a3a}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--light);color:#0d1f36}
+button,input,textarea,select{font:inherit}
+.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(160deg,#06172e,#0d2b52);padding:20px}
+.login-card,.panel{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 15px 50px #0002}
+.login-card{width:min(430px,100%);padding:36px}
+.mark{width:54px;height:54px;border-radius:13px;background:linear-gradient(135deg,var(--blue),#1a3f72);display:grid;place-items:center;color:#fff;font-weight:800;margin-bottom:16px}
+.login h1{font-size:1.45rem;margin:0}
+.sub{color:var(--slate);font-size:.86rem;margin:5px 0 24px}
+.field{margin:0 0 14px}
+.field label{display:block;font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin-bottom:7px}
+.field input,.field textarea,.field select{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:#10243d}
+.field textarea{min-height:100px;resize:vertical}
+.btn{border:0;border-radius:8px;padding:12px 18px;background:var(--navy);color:#fff;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--blue)}
+.btn.green{background:var(--green)}
+.btn.red{background:#fff;color:var(--red);border:1px solid #e8c7c7}
+.error{color:var(--red);font-size:.85rem;margin-top:10px;display:none}
+.shell{display:none;min-height:100vh}
+.sidebar{position:fixed;inset:0 auto 0 0;width:235px;background:linear-gradient(#081a34,#061225);color:#fff;padding:18px 0;z-index:20}
+.brand{padding:0 20px 18px;border-bottom:1px solid #ffffff14}
+.brand b{display:block}
+.brand small{color:#8eb0ca}
+.nav{padding:14px 0}
+.nav button{display:block;width:100%;border:0;background:transparent;color:#c7d6e5;text-align:left;padding:12px 20px;cursor:pointer}
+.nav button.active,.nav button:hover{background:#0ea5e922;color:#fff;border-left:3px solid var(--blue)}
+.side-foot{position:absolute;left:20px;right:20px;bottom:18px}
+.content{margin-left:235px;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:15px 25px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.topbar h2{margin:0;font-size:1.25rem}
+.main{max-width:1280px;margin:auto;padding:24px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid var(--border);border-top:3px solid var(--blue);padding:18px;border-radius:11px;text-align:center}
+.stat b{display:block;font-size:1.8rem}
+.stat small{color:var(--slate);text-transform:uppercase}
+.stat-btn{cursor:pointer;transition:.2s;user-select:none}
+.stat-btn:hover,.stat-btn.open{background:#e8f6fe;border-color:var(--blue);box-shadow:0 6px 18px #0ea5e922;transform:translateY(-2px)}
+.stat-btn .stat-hint{display:block;margin-top:6px;font-size:.68rem;color:var(--blue);font-weight:700;letter-spacing:.04em}
+.all-ship-panel{display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px;box-shadow:0 10px 30px #0a1f3d0d}
+.all-ship-panel.open{display:block}
+.all-ship-panel .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.all-ship-panel .panel-head h3{margin:0}
+.all-ship-list{max-height:420px;overflow:auto}
+.grid{display:grid;grid-template-columns:1fr 1.35fr;gap:20px}
+.panel{padding:22px;margin-bottom:20px}
+.panel h3{margin:0 0 4px}
+.section{font-size:.72rem;color:var(--blue);font-weight:800;letter-spacing:.1em;text-transform:uppercase;border-bottom:2px solid #e0f2fe;padding-bottom:6px;margin:18px 0 12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ship{border:1px solid var(--border);border-radius:9px;padding:13px;margin:8px 0;cursor:pointer}
+.ship.active{background:#e0f2fe;border-color:var(--blue)}
+.ship .id{font-family:monospace;font-weight:800}
+.ship .route{font-size:.84rem;color:var(--slate);margin-top:4px;overflow-wrap:anywhere}
+.ship-actions{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.mini{padding:7px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:.76rem}
+.detail{display:none}
+.detail.show{display:block}
+.kv{display:flex;justify-content:space-between;gap:15px;padding:9px 0;border-bottom:1px solid #e6eef6}
+.kv span:first-child{color:var(--slate)}
+.kv span:last-child{text-align:right;font-weight:650;max-width:66%;overflow-wrap:anywhere;white-space:pre-wrap}
+.toast{position:fixed;right:20px;bottom:20px;background:#0a1f3d;color:#fff;padding:12px 16px;border-radius:9px;display:none;z-index:100}
+.toast.show{display:block}
+.hidden{display:none!important}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .content{margin-left:0}
+  .stats{grid-template-columns:1fr 1fr}
+  .grid{grid-template-columns:1fr}
+  .main{padding:14px}
+  .row2{grid-template-columns:1fr}
+  .topbar{padding:13px 15px}
+}
+</style>
+</head>
+<body>
+<div class="login" id="loginScreen">
+  <div class="login-card">
+    <div class="mark">AE</div>
+    <h1>ATLAS EXPRESS SERVICE</h1>
+    <div class="sub">Admin Portal — Secure Access</div>
+    <div class="field"><label>Username</label><input id="username" autocomplete="username" placeholder="admin"></div>
+    <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    <button class="btn" style="width:100%" onclick="login()">Log in</button>
+    <div class="error" id="loginError">Incorrect username or password.</div>
+  </div>
+</div>
+
+<div class="shell" id="shell">
+  <aside class="sidebar">
+    <div class="brand"><b>ATLAS EXPRESS SERVICE</b><small>Admin Dashboard</small></div>
+    <div class="nav">
+      <button class="active" onclick="tab('dashboard',this)">📦 Dashboard</button>
+      <button onclick="tab('shipments',this)">🚚 Shipments</button>
+      <button type="button" onclick="goCreate()">➕ New Shipment</button>
+    </div>
+    <div class="side-foot"><button class="btn" style="width:100%" onclick="logout()">Log out</button></div>
+  </aside>
+  <div class="content">
+    <div class="topbar">
+      <div>
+        <h2 id="title">Dashboard</h2>
+        <div class="sub" id="subtitle">Overview of all shipping activity</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn green" type="button" onclick="goCreate()">➕ New Shipment</button>
+        <button class="btn" type="button" onclick="loadShipments()">↻ Refresh</button>
+      </div>
+    </div>
+    <main class="main">
+      <div class="stats">
+        <div class="stat stat-btn" id="statTotalBtn" onclick="toggleAllShipments()" title="Click to view all shipments">
+          <b id="statTotal">0</b>
+          <small>Total Shipments</small>
+          <span class="stat-hint" id="statTotalHint">Click to view list ▾</span>
+        </div>
+        <div class="stat"><b id="statTransit">0</b><small>In Transit</small></div>
+        <div class="stat"><b id="statDelivered">0</b><small>Delivered</small></div>
+        <div class="stat"><b id="statPending">0</b><small>Pending</small></div>
+      </div>
+
+      <section id="tab-dashboard">
+        <div class="panel" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0 0 4px">Create a shipment</h3>
+            <div class="sub" style="margin:0">Register a new package and generate a tracking ID.</div>
+          </div>
+          <button class="btn green" type="button" onclick="goCreate()">➕ Create New Shipment</button>
+        </div>
+        <div class="all-ship-panel" id="allShipPanel">
+          <div class="panel-head">
+            <div>
+              <h3>All Created Shipments (<span id="allShipCount">0</span>)</h3>
+              <div class="sub" style="margin:4px 0 0">Every shipment registered in this admin portal.</div>
+            </div>
+            <button class="btn" type="button" style="padding:8px 14px;font-size:.85rem" onclick="toggleAllShipments()">✕ Close</button>
+          </div>
+          <input style="width:100%;padding:11px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px" id="dashSearch" placeholder="Search ID, name or destination" oninput="renderAllShipList()">
+          <div class="all-ship-list" id="allShipList"></div>
+        </div>
+        <div class="grid">
+          <div class="panel">
+            <h3>Recent Shipments</h3>
+            <div class="sub">Latest shipment records.</div>
+            <div id="recent"></div>
+          </div>
+          <div class="panel">
+            <h3>Shipment Overview</h3>
+            <div class="sub">Current distribution by stage.</div>
+            <div id="stageBars"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-shipments" class="hidden">
+        <div class="grid">
+          <div class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+              <h3 style="margin:0">All Shipments</h3>
+              <button class="btn green" type="button" style="padding:8px 14px;font-size:.85rem" onclick="goCreate()">➕ New Shipment</button>
+            </div>
+            <input style="width:100%;padding:11px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px" id="search" placeholder="Search ID, name or destination" oninput="renderList()">
+            <div id="shipList"></div>
+          </div>
+          <div class="panel">
+            <div id="emptyDetail" class="sub">Select a shipment to view and edit it.</div>
+            <div id="detail" class="detail">
+              <h3 id="d_id"></h3>
+              <div class="sub" id="d_beneficiary"></div>
+              <div class="section">Shipment information</div>
+              <div id="detailInfo"></div>
+
+              <div class="section">💬 Admin Note</div>
+              <div class="field">
+                <label>Admin Note — shown on customer tracking page and invoice</label>
+                <textarea id="editNote" placeholder="Write the note for this shipment..."></textarea>
+              </div>
+              <button class="btn" onclick="saveNote()">💾 Save Note</button>
+
+              <div class="section">📢 Notification to Beneficiary</div>
+              <div class="field">
+                <label>Company instruction / notification for the receiver (printed on invoice page 2)</label>
+                <textarea id="editNotification" placeholder="e.g. Please prepare ID for customs clearance. Contact us on arrival."></textarea>
+              </div>
+              <button class="btn" onclick="saveNotification()">💾 Save Notification</button>
+
+              <div class="section">🔄 Tracking Update</div>
+              <div class="row2">
+                <div class="field"><label>Stage</label><select id="editStatus"></select></div>
+                <div class="field"><label>Location</label><input id="editLocation" placeholder="Sorting hub, city, country"></div>
+              </div>
+              <div class="field"><label>Update Note</label><input id="updateNote" placeholder="Optional timeline update note"></div>
+              <button class="btn" onclick="updateStage()">Update Stage</button>
+
+              <div class="section">💰 Payment</div>
+              <div class="row2">
+                <div class="field"><label>Amount to be Paid</label><input id="payTotal"></div>
+                <div class="field"><label>Amount Paid</label><input id="payPaid"></div>
+              </div>
+              <div class="row2">
+                <div class="field">
+                  <label>Payment Status</label>
+                  <select id="payStatus">
+                    <option>Unpaid</option>
+                    <option>Partial</option>
+                    <option>Paid</option>
+                    <option>Pending Verification</option>
+                    <option>Refunded</option>
+                  </select>
+                </div>
+                <div class="field"><label>Payment Note</label><input id="payNote"></div>
+              </div>
+              <button class="btn" onclick="savePayment()">Save Payment</button>
+
+              <div class="ship-actions" style="margin-top:18px">
+                <button class="btn green" onclick="downloadInvoice()">⬇ Download Invoice</button>
+                <button class="btn red" onclick="deleteShipment()">🗑 Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-create" class="hidden">
+        <div class="panel">
+          <h3>Create New Shipment</h3>
+          <div class="sub">All data is saved only to JsonBin. Tracking ID is generated automatically.</div>
+
+          <div class="section">Sender</div>
+          <div class="row2">
+            <div class="field"><label>Sender Name *</label><input id="f_senderName"></div>
+            <div class="field"><label>Sender Phone *</label><input id="f_senderPhone"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Sender Email *</label><input id="f_senderEmail" type="email"></div>
+            <div class="field"><label>Origin / Address *</label><input id="f_origin"></div>
+          </div>
+
+          <div class="section">Receiver</div>
+          <div class="row2">
+            <div class="field"><label>Receiver Name *</label><input id="f_receiverName"></div>
+            <div class="field"><label>Receiver Phone *</label><input id="f_receiverPhone"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Receiver Email *</label><input id="f_receiverEmail" type="email"></div>
+            <div class="field"><label>Destination / Address *</label><input id="f_destination"></div>
+          </div>
+
+          <div class="section">Shipment</div>
+          <div class="row2">
+            <div class="field"><label>Goods Description *</label><input id="f_goods"></div>
+            <div class="field"><label>Item Type</label><input id="f_itemType"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Weight *</label><input id="f_weight" placeholder="e.g. 12 kg"></div>
+            <div class="field"><label>Quantity</label><input id="f_quantity" value="1"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Declared Value (GBP)</label><input id="f_value" placeholder="e.g. 500"></div>
+            <div class="field"><label>Amount to be Paid (GBP) *</label><input id="f_amount" placeholder="e.g. 120"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Date Shipped *</label><input id="f_dateShipped" type="date"></div>
+            <div class="field"><label>Expected Delivery *</label><input id="f_eta" type="date"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Initial Stage</label><select id="f_status"></select></div>
+            <div class="field">
+              <label>Service Type</label>
+              <select id="f_service">
+                <option>International Air Express</option>
+                <option>Ocean Freight</option>
+                <option>Rail Freight</option>
+                <option>Road Freight</option>
+                <option>Same-Day Express</option>
+                <option>White Glove Service</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section">📝 Admin Note</div>
+          <div class="field">
+            <label>Admin Note — printed on invoice and shown in tracking</label>
+            <textarea id="f_notes" placeholder="Internal or public note for this shipment..."></textarea>
+          </div>
+
+          <div class="section">📢 Notification to Beneficiary</div>
+          <div class="field">
+            <label>Instruction / notification for the receiver (invoice page 2 & tracking)</label>
+            <textarea id="f_notification" placeholder="e.g. Please have a valid ID ready for delivery. Call +44... if you need assistance."></textarea>
+          </div>
+
+          <button class="btn green" type="button" style="width:100%;padding:14px 20px;font-size:1rem;margin-top:8px" onclick="createShipment()">
+            ➕ Generate Tracking ID & Create Shipment
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const BIN = '6a504daaf5f4af5e297a64c8';
+const MASTER = '$2a$10$HAkKYldNteLU88hcedQVK.GlW8/VQnC1HntBdSHSDyK8ziHgidq4y';
+const BASE = 'https://api.jsonbin.io/v3/b/' + BIN;
+const SESSION = 'atlas_admin_session';
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'admin3030';
+const STAGES = ['Shipment Created','Picked Up','Warehouse','Airport','Customs','Destination Country','Local Distribution','Out for Delivery','Delivered'];
+
+let allShipments = {};
+let selectedId = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+};
+
+function toast(m) {
+  $('toast').textContent = m;
+  $('toast').classList.add('show');
+  setTimeout(() => $('toast').classList.remove('show'), 3000);
+}
+
+function login() {
+  const u = $('username').value.trim();
+  const p = $('password').value;
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    sessionStorage.setItem(SESSION, '1');
+    showAdmin();
+  } else {
+    $('loginError').style.display = 'block';
+  }
+}
+
+$('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+function logout() {
+  sessionStorage.removeItem(SESSION);
+  $('loginScreen').style.display = 'grid';
+  $('shell').style.display = 'none';
+}
+
+async function showAdmin() {
+  $('loginScreen').style.display = 'none';
+  $('shell').style.display = 'block';
+  await loadShipments();
+}
+
+if (sessionStorage.getItem(SESSION) === '1') showAdmin();
+
+function tab(n, el) {
+  ['dashboard', 'shipments', 'create'].forEach(x => {
+    const sec = $('tab-' + x);
+    if (sec) sec.classList.toggle('hidden', x !== n);
+  });
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else {
+    const idx = n === 'dashboard' ? 0 : n === 'shipments' ? 1 : 2;
+    const btn = document.querySelectorAll('.nav button')[idx];
+    if (btn) btn.classList.add('active');
+  }
+  $('title').textContent = n === 'create' ? 'New Shipment' : n[0].toUpperCase() + n.slice(1);
+  $('subtitle').textContent =
+    n === 'create' ? 'Register a new shipment' :
+    n === 'shipments' ? 'Manage and update shipments' :
+    'Overview of all shipping activity';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goCreate() {
+  tab('create', document.querySelectorAll('.nav button')[2]);
+  const form = $('tab-create');
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function fetchBin() {
+  const r = await fetch(BASE + '/latest', { headers: { 'X-Master-Key': MASTER } });
+  if (!r.ok) throw new Error('fetch failed');
+  const d = await r.json();
+  return d.record || { shipments: {} };
+}
+
+async function saveBin() {
+  const r = await fetch(BASE, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER },
+    body: JSON.stringify({ shipments: allShipments })
+  });
+  if (!r.ok) throw new Error('save failed');
+}
+
+async function loadShipments() {
+  try {
+    const d = await fetchBin();
+    allShipments = d.shipments || {};
+    renderList();
+    renderDashboard();
+    if (selectedId) renderDetail();
+  } catch (e) {
+    toast('Unable to load shipments from JsonBin');
+  }
+}
+
+function renderDashboard() {
+  const a = Object.values(allShipments);
+  if ($('statTotal')) $('statTotal').textContent = a.length;
+  if ($('allShipCount')) $('allShipCount').textContent = a.length;
+  if ($('statDelivered')) $('statDelivered').textContent = a.filter(s => s.status === 'Delivered').length;
+  if ($('statPending')) $('statPending').textContent = a.filter(s => s.status === 'Shipment Created').length;
+  if ($('statTransit')) $('statTransit').textContent = a.filter(s => {
+    const i = STAGES.indexOf(s.status);
+    return i > 0 && i < 8;
+  }).length;
+
+  const recent = a.slice().sort((x, y) => new Date(y.created) - new Date(x.created)).slice(0, 6);
+  if ($('recent')) $('recent').innerHTML = recent.map(shipCard).join('') || '<div class="sub">No shipments yet.</div>';
+
+  const counts = STAGES.map(x => a.filter(s => s.status === x).length);
+  const max = Math.max(1, ...counts);
+  if ($('stageBars')) {
+    $('stageBars').innerHTML = STAGES.map((x, i) =>
+      `<div style="display:flex;gap:10px;align-items:center;margin:8px 0">
+        <span style="width:145px;font-size:.82rem">${esc(x)}</span>
+        <span style="height:9px;flex:1;background:#e0f2fe;border-radius:99px;overflow:hidden">
+          <i style="display:block;height:100%;width:${(counts[i] / max) * 100}%;background:linear-gradient(90deg,#1a3f72,#0ea5e9)"></i>
+        </span>
+        <b>${counts[i]}</b>
+      </div>`
+    ).join('');
+  }
+
+  if ($('allShipPanel')?.classList.contains('open')) renderAllShipList();
+}
+
+function toggleAllShipments() {
+  const panel = $('allShipPanel');
+  const btn = $('statTotalBtn');
+  const hint = $('statTotalHint');
+  if (!panel) return;
+  const open = !panel.classList.contains('open');
+  panel.classList.toggle('open', open);
+  if (btn) btn.classList.toggle('open', open);
+  if (hint) hint.textContent = open ? 'Click to hide list ▴' : 'Click to view list ▾';
+  if (open) {
+    tab('dashboard', document.querySelectorAll('.nav button')[0]);
+    renderAllShipList();
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function renderAllShipList() {
+  const box = $('allShipList');
+  if (!box) return;
+  const q = ($('dashSearch')?.value || '').toLowerCase();
+  const a = Object.values(allShipments)
+    .filter(s => !q || JSON.stringify(s).toLowerCase().includes(q))
+    .sort((x, y) => new Date(y.created) - new Date(x.created));
+  if ($('allShipCount')) $('allShipCount').textContent = a.length;
+  box.innerHTML = a.map(shipCard).join('') || '<div class="sub">No shipments found.</div>';
+}
+
+function shipCard(s) {
+  return `<div class="ship ${selectedId === s.id ? 'active' : ''}" onclick="selectShipment('${esc(s.id)}')">
+    <div class="id">${esc(s.id)}</div>
+    <div class="route">${esc(s.origin)} → ${esc(s.destination)}</div>
+    <div class="route">📦 ${esc(s.goods)} · 👤 ${esc(s.receiverName)}</div>
+    <div class="ship-actions">
+      <button class="mini" onclick="event.stopPropagation();selectShipment('${esc(s.id)}')">View</button>
+      <button class="mini" onclick="event.stopPropagation();invoiceById('${esc(s.id)}')">⬇ Invoice</button>
+    </div>
+  </div>`;
+}
+
+function renderList() {
+  const q = ($('search')?.value || '').toLowerCase();
+  const a = Object.values(allShipments)
+    .filter(s => !q || JSON.stringify(s).toLowerCase().includes(q))
+    .sort((x, y) => new Date(y.created) - new Date(x.created));
+  $('shipList').innerHTML = a.map(shipCard).join('') || '<div class="sub">No matching shipments.</div>';
+}
+
+function selectShipment(id) {
+  selectedId = id;
+  tab('shipments', document.querySelectorAll('.nav button')[1]);
+  renderList();
+  renderDetail();
+}
+
+function setKV(label, value) {
+  return `<div class="kv"><span>${esc(label)}</span><span>${esc(value || '—')}</span></div>`;
+}
+
+function renderDetail() {
+  const s = allShipments[selectedId];
+  if (!s) {
+    $('emptyDetail').style.display = 'block';
+    $('detail').classList.remove('show');
+    return;
+  }
+  $('emptyDetail').style.display = 'none';
+  $('detail').classList.add('show');
+  $('d_id').textContent = s.id;
+  $('d_beneficiary').textContent = 'For ' + (s.receiverName || '—') + ' · ' + (s.receiverEmail || '—');
+  $('detailInfo').innerHTML =
+    setKV('Sender', s.senderName) +
+    setKV('Sender Phone', s.senderPhone) +
+    setKV('Sender Email', s.senderEmail) +
+    setKV('Origin', s.origin) +
+    setKV('Receiver', s.receiverName) +
+    setKV('Receiver Phone', s.receiverPhone) +
+    setKV('Receiver Email', s.receiverEmail) +
+    setKV('Destination', s.destination) +
+    setKV('Goods', s.goods) +
+    setKV('Weight', s.weight) +
+    setKV('Quantity', s.quantity) +
+    setKV('Service', s.service) +
+    setKV('Date Shipped', s.dateShipped) +
+    setKV('Expected Delivery', s.eta) +
+    setKV('Current Stage', s.status) +
+    setKV('Payment Status', s.paymentStatus || 'Unpaid') +
+    setKV('Notification', s.notification || '—');
+
+  $('editNote').value = s.invoiceNote ?? s.notes ?? '';
+  $('editNotification').value = s.notification ?? '';
+  $('editStatus').innerHTML = STAGES.map(x => `<option>${x}</option>`).join('');
+  $('editStatus').value = s.status || 'Shipment Created';
+  $('editLocation').value = '';
+  $('updateNote').value = '';
+  $('payTotal').value = s.amountToPay || '';
+  $('payPaid').value = s.amountPaid || '';
+  $('payStatus').value = s.paymentStatus || 'Unpaid';
+  $('payNote').value = s.paymentNote || '';
+}
+
+async function saveNote() {
+  const s = allShipments[selectedId];
+  if (!s) return;
+  s.invoiceNote = $('editNote').value.trim();
+  s.notes = s.invoiceNote || 'None';
+  try {
+    await saveBin();
+    renderDetail();
+    toast('Note saved ✓');
+  } catch {
+    toast('Failed to save note');
+  }
+}
+
+async function saveNotification() {
+  const s = allShipments[selectedId];
+  if (!s) return;
+  s.notification = $('editNotification').value.trim();
+  try {
+    await saveBin();
+    renderDetail();
+    toast('Notification saved ✓');
+  } catch {
+    toast('Failed to save notification');
+  }
+}
+
+async function updateStage() {
+  const s = allShipments[selectedId];
+  if (!s) return;
+  s.history = s.history || [];
+  const status = $('editStatus').value;
+  const loc = $('editLocation').value.trim() || s.destination || s.origin;
+  const note = $('updateNote').value.trim();
+  s.history.push({ location: loc, status, time: new Date().toISOString(), note });
+  s.status = status;
+  try {
+    await saveBin();
+    renderDetail();
+    renderList();
+    renderDashboard();
+    toast('Tracking updated ✓');
+  } catch {
+    toast('Failed to save tracking update');
+  }
+}
+
+async function savePayment() {
+  const s = allShipments[selectedId];
+  if (!s) return;
+  s.amountToPay = $('payTotal').value.trim() || s.amountToPay || 'N/A';
+  s.amountPaid = $('payPaid').value.trim() || '£0';
+  s.paymentStatus = $('payStatus').value;
+  s.paymentNote = $('payNote').value.trim();
+  try {
+    await saveBin();
+    renderDetail();
+    toast('Payment saved ✓');
+  } catch {
+    toast('Failed to save payment');
+  }
+}
+
+async function deleteShipment() {
+  if (!selectedId || !confirm('Delete ' + selectedId + '?')) return;
+  delete allShipments[selectedId];
+  selectedId = null;
+  try {
+    await saveBin();
+    renderList();
+    renderDashboard();
+    renderDetail();
+    toast('Shipment deleted');
+  } catch {
+    toast('Delete failed');
+  }
+}
+
+function generateId() {
+  let id;
+  do {
+    id = 'ATEX-' + new Date().getFullYear() + '-' + Math.floor(10000 + Math.random() * 90000);
+  } while (allShipments[id]);
+  return id;
+}
+
+async function createShipment() {
+  const required = [
+    'f_senderName', 'f_senderPhone', 'f_senderEmail', 'f_origin',
+    'f_receiverName', 'f_receiverPhone', 'f_receiverEmail', 'f_destination',
+    'f_goods', 'f_weight', 'f_amount', 'f_dateShipped', 'f_eta'
+  ];
+  for (const id of required) {
+    const el = $(id);
+    if (!el || !String(el.value || '').trim()) {
+      toast('Please fill all required fields (*)');
+      if (el) el.focus();
+      return;
+    }
+  }
+
+  const id = generateId();
+  const now = new Date().toISOString();
+  const note = $('f_notes').value.trim();
+  const notification = $('f_notification').value.trim();
+
+  const s = {
+    id,
+    senderName: $('f_senderName').value.trim(),
+    senderPhone: $('f_senderPhone').value.trim(),
+    senderEmail: $('f_senderEmail').value.trim(),
+    origin: $('f_origin').value.trim(),
+    receiverName: $('f_receiverName').value.trim(),
+    receiverPhone: $('f_receiverPhone').value.trim(),
+    receiverEmail: $('f_receiverEmail').value.trim(),
+    destination: $('f_destination').value.trim(),
+    goods: $('f_goods').value.trim(),
+    itemType: $('f_itemType').value.trim(),
+    weight: $('f_weight').value.trim(),
+    quantity: $('f_quantity').value.trim() || '1',
+    declaredValue: $('f_value').value.trim() || 'N/A',
+    amountToPay: $('f_amount').value.trim(),
+    amountPaid: '£0',
+    paymentStatus: 'Unpaid',
+    paymentNote: '',
+    dateShipped: $('f_dateShipped').value,
+    eta: $('f_eta').value,
+    status: $('f_status').value || 'Shipment Created',
+    service: $('f_service').value,
+    readyForPickup: false,
+    notes: note || 'None',
+    invoiceNote: note,
+    notification: notification,
+    created: now,
+    history: [{
+      location: $('f_origin').value.trim(),
+      status: $('f_status').value || 'Shipment Created',
+      time: now,
+      note: 'Shipment registered with ATLAS EXPRESS SERVICE.'
+    }],
+    messages: []
+  };
+
+  allShipments[id] = s;
+
+  try {
+    await saveBin();
+    toast('Shipment created: ' + id);
+    [
+      'f_senderName', 'f_senderPhone', 'f_senderEmail', 'f_origin',
+      'f_receiverName', 'f_receiverPhone', 'f_receiverEmail', 'f_destination',
+      'f_goods', 'f_itemType', 'f_weight', 'f_quantity', 'f_value', 'f_amount',
+      'f_dateShipped', 'f_eta', 'f_notes', 'f_notification'
+    ].forEach(x => { $(x).value = x === 'f_quantity' ? '1' : ''; });
+    $('f_status').value = 'Shipment Created';
+    renderDashboard();
+    tab('shipments', document.querySelectorAll('.nav button')[1]);
+    selectShipment(id);
+  } catch {
+    delete allShipments[id];
+    toast('Failed to save shipment to JsonBin');
+  }
+}
+
+$('f_status').innerHTML = STAGES.map(x => `<option>${x}</option>`).join('');
+$('f_status').value = 'Shipment Created';
+$('editStatus').innerHTML = STAGES.map(x => `<option>${x}</option>`).join('');
+
+function invoiceById(id) {
+  const s = allShipments[id];
+  if (s) generateInvoice(s);
+}
+function downloadInvoice() {
+  if (selectedId) invoiceById(selectedId);
+}
+
+function clean(v) {
+  return String(v ?? '').replace(/\s+/g, ' ').trim() || '—';
+}
+
+function parseMoney(v) {
+  const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+function money(n) {
+  return '£' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+
+function generateInvoice(s){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', compress:true });
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const M = 12;
+  const CW = PW - M*2;
+  const MAX_Y = PH - 14;
+  const navy = '#0A1931';
+  const navyLight = '#142B4F';
+  const gold = '#C5A880';
+  const iceBlue = '#F0F4F8';
+  const muted = '#5C728E';
+  const STAGES = ['Shipment Created','Picked Up','Warehouse','Airport','Customs','Destination Country','Local Distribution','In Transit','Out for Delivery','Delivered'];
+
+  function clean(v){ return (v==null?'':String(v)).trim(); }
+  function parseMoney(v){ if(v==null) return null; const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+  function money(n){ return '\u00A3' + Number(n).toFixed(2); }
+
+  function drawPageBackground(){
+    // Professional subtle background
+    doc.setFillColor('#F8FAFC');
+    doc.rect(0,0,PW,PH,'F');
+    // Left subtle accent stripe
+    doc.setFillColor('#E8EDF3');
+    doc.rect(0,0,4,PH,'F');
+    // Top gold thin line under header
+    // (drawn in header)
+  }
+
+  function pageHeader(page){
+    drawPageBackground();
+    // Main navy header with gradient effect (two rects)
+    doc.setFillColor(navy);
+    doc.rect(0,0,PW,30,'F');
+    doc.setFillColor(navyLight);
+    doc.rect(0,24, PW, 6,'F');
+    // Gold accent line
+    doc.setFillColor(gold);
+    doc.rect(0,30,PW,1.2,'F');
+
+    doc.setTextColor('#FFFFFF');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(17);
+    doc.text('ATLAS EXPRESS SERVICE', M+2, 14);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor('#C5D0E0');
+    doc.text('PREMIUM SHIPPING & LOGISTICS - WORLDWIDE', M+2, 20);
+    
+    // Tracking badge - gold background
+    const tid = clean(s.id);
+    doc.setFillColor(gold);
+    doc.roundedRect(PW-M-58, 8, 56, 10, 2,2,'F');
+    doc.setTextColor(navy);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8.5);
+    doc.text('Tracking: ' + tid, PW-M-3, 14.5, {align:'right'});
+
+    doc.setTextColor('#FFFFFF');
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.text('Page ' + page + ' of 3 | Official Document', PW-M, 26, {align:'right'});
+  }
+
+  function footer(page){
+    // Gold line above footer
+    doc.setFillColor(gold);
+    doc.rect(M, PH-12, CW, 0.6,'F');
+    doc.setTextColor('#7A869A');
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('Atlas Express Service - Premium Logistics - Track online using Tracking ID', PW/2, PH-8, {align:'center'});
+    doc.text('Official shipping document - Page ' + page + ' of 3 - Vector Professional Edition', PW/2, PH-4.5, {align:'center'});
+  }
+
+  function wrap(text,width,size){ doc.setFontSize(size); return doc.splitTextToSize(clean(text), width); }
+  
+  function premiumBox(x,y,w,h,fill){
+    // Professional box with subtle shadow
+    doc.setFillColor('#D6DDE8');
+    doc.roundedRect(x+0.6, y+0.6, w, h, 3,3,'F');
+    doc.setFillColor(fill||'#FFFFFF');
+    doc.setDrawColor('#D0D8E5');
+    doc.setLineWidth(0.35);
+    doc.roundedRect(x,y,w,h,3,3,'FD');
+  }
+
+  function label(text,x,y){
+    doc.setTextColor('#8A9BB0');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text(String(text).toUpperCase(), x, y);
+  }
+
+  function section(t,y){
+    // Premium section with gold left bar
+    doc.setFillColor(navy);
+    doc.roundedRect(M,y,CW,10,2.5,2.5,'F');
+    doc.setFillColor(gold);
+    doc.rect(M, y, 3.5, 10,'F');
+    doc.setTextColor('#FFFFFF');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11.5);
+    doc.text(t, M+7, y+7);
+    return y+14;
+  }
+
+  function safeVal(text,x,y,w,size,maxLines){
+    doc.setTextColor('#121F33');
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(size);
+    const lines = wrap(text,w-2,size);
+    const limited = maxLines ? lines.slice(0,maxLines) : lines;
+    doc.text(limited, x, y);
+    return limited.length;
+  }
+
+  function drawStamp(x,y,w,h,line1,line2,color){
+    // Premium stamp with gold border
+    doc.setFillColor('#FFFFFF');
+    doc.setDrawColor(color);
+    doc.setLineWidth(1.1);
+    doc.roundedRect(x,y,w,h,5,5,'FD');
+    doc.setDrawColor(gold);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(x+1.2,y+1.2,w-2.4,h-2.4,4,4,'D');
+    doc.setLineWidth(0.4);
+    doc.setDrawColor(color);
+    doc.setLineDashPattern([1.3,0.9],0);
+    doc.roundedRect(x+2.8,y+2.8,w-5.6,h-5.6,3,3,'D');
+    doc.setLineDashPattern([],0);
+    doc.setTextColor(color);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11.5);
+    doc.text(line1, x+w/2, y+h/2 - (line2?2.5:0), {align:'center'});
+    if(line2){
+      doc.setFontSize(8.8);
+      doc.text(line2, x+w/2, y+h/2+5.5, {align:'center'});
+    }
+  }
+
+  // ========= PAGE 1 =========
+  pageHeader(1);
+  let y = 40;
+  doc.setTextColor(navy);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(16);
+  doc.text('SHIPPING INVOICE', M, y);
+  doc.setFillColor(gold);
+  doc.rect(M, y+2, 38, 1.5,'F');
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  doc.setTextColor('#334155');
+  doc.text('Issued: ' + new Date().toLocaleDateString(), PW-M, y, {align:'right'});
+  y+=10;
+
+  const gap = 5; const half = (CW-gap)/2; const boxH = 58;
+  premiumBox(M,y,half,boxH,'#FFFFFF');
+  premiumBox(M+half+gap,y,half,boxH,'#F8FBFF');
+
+  label('Sender', M+5, y+8);
+  safeVal(s.senderName, M+5, y+14, half-8, 11.5, 1);
+  safeVal(s.senderPhone, M+5, y+20, half-8, 10.5, 1);
+  safeVal(s.senderEmail, M+5, y+26, half-8, 9.5, 1);
+  label('Origin', M+5, y+33);
+  safeVal(s.origin, M+5, y+39, half-8, 10, 2);
+
+  label('Receiver', M+half+gap+5, y+8);
+  safeVal(s.receiverName, M+half+gap+5, y+14, half-8, 11.5, 1);
+  safeVal(s.receiverPhone, M+half+gap+5, y+20, half-8, 10.5, 1);
+  safeVal(s.receiverEmail, M+half+gap+5, y+26, half-8, 9.5, 1);
+  label('Destination', M+half+gap+5, y+33);
+  safeVal(s.destination, M+half+gap+5, y+39, half-8, 10, 2);
+
+  y+= boxH+7;
+
+  y = section('SHIPMENT DETAILS', y);
+  const cols = [CW*0.50, CW*0.14, CW*0.10, CW*0.26];
+  doc.setFillColor('#E2E8F0');
+  doc.rect(M,y,CW,10,'F');
+  doc.setFillColor('#EDF1F6');
+  doc.rect(M,y,CW,10,'F');
+  doc.setTextColor(navy); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+  let x = M+4; ['DESCRIPTION','WEIGHT','QTY','DECLARED VALUE'].forEach((h,i)=>{ doc.text(h, x, y+7); x+=cols[i]; });
+  y+=10;
+  premiumBox(M,y,CW,20,'#FFFFFF');
+  x = M; const vals = [s.goods, s.weight, s.quantity || '1', s.declaredValue || 'N/A'];
+  vals.forEach((v,i)=>{
+    doc.setTextColor('#121F33'); doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+    const lines = wrap(v, cols[i]-6, 10.5).slice(0,3);
+    doc.text(lines, x+4, y+7); x+=cols[i];
+  });
+  y+=26;
+
+  y = section('TRACKING INFORMATION', y);
+  label('Service Type', M, y); safeVal(s.service, M+40, y, CW*0.5, 11, 1);
+  label('Date Shipped', M, y+8); safeVal(s.dateShipped, M+40, y+8, CW*0.5, 11, 1);
+  label('Expected Delivery', M, y+16); safeVal(s.eta, M+40, y+16, CW*0.5, 11, 1);
+  label('Current Stage', M, y+24); safeVal(s.status, M+40, y+24, CW*0.5, 11, 1);
+  y+=34;
+
+  y = section('ADMIN NOTE', y);
+  const noteText = s.invoiceNote ?? s.notes ?? 'No special note was added to this shipment.';
+  const noteW = CW - 18;
+  let noteLines = wrap(noteText, noteW, 11);
+  if(noteLines.length > 4) noteLines = noteLines.slice(0,4);
+  const noteH = noteLines.length * 6 + 16;
+  premiumBox(M,y,CW,noteH,'#FFFBEB');
+  doc.setDrawColor('#E8C96A'); doc.setLineWidth(0.5); doc.roundedRect(M,y,CW,noteH,3,3,'S'); doc.setLineWidth(0.25);
+  doc.setTextColor('#1F2937'); doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  doc.text(noteLines, M+9, y+10);
+  y+= noteH+6;
+
+  if(y+12 < MAX_Y){
+    doc.setFillColor(navy);
+    doc.roundedRect(M,y,CW,11,3,3,'F');
+    doc.setFillColor(gold);
+    doc.rect(M,y,3,11,'F');
+    doc.setTextColor('#FFFFFF'); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('CURRENT STAGE: ' + clean(s.status).toUpperCase(), PW/2, y+7.5, {align:'center'});
+  }
+  footer(1);
+
+  // ========= PAGE 2 - FULL TERMS INCLUDED =========
+  doc.addPage();
+  pageHeader(2);
+  y = 40;
+  doc.setTextColor(navy); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('NOTIFICATIONS & INSTRUCTIONS', M, y);
+  doc.setFillColor(gold); doc.rect(M, y+2, 45, 1.2,'F');
+  y+=10;
+
+  y = section('NOTIFICATION TO BENEFICIARY', y);
+  const notifText = (s.notification && String(s.notification).trim()) ? s.notification : 'No specific notification has been issued for this shipment by Atlas Express Service.';
+  let notifLines = wrap(notifText, CW-18, 11);
+  if(notifLines.length > 3) notifLines = notifLines.slice(0,3);
+  const notifH = notifLines.length * 6 + 14;
+  premiumBox(M,y,CW,notifH,'#FFFBEB');
+  doc.setTextColor('#1F2937'); doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  doc.text(notifLines, M+9, y+9); y+= notifH+10;
+
+  y = section('TERMS & CONDITIONS OF CARRIAGE - FULL', y);
+  // TERMS NOT OMITTED - ALL 6 INCLUDED FULLY
+  const terms = [
+    '1. Full payment of the amount stated on this invoice must be settled prior to pickup or final delivery, unless otherwise agreed in writing.',
+    '2. All goods are subject to inspection, valuation, and customs clearance by relevant authorities.',
+    '3. The sender is responsible for accurate item description, weight, declared value and recipient information.',
+    '4. Shipments must not contain prohibited goods or items restricted by applicable customs regulations.',
+    '5. Claims for loss, damage or delay should be submitted in writing within seven calendar days of delivery.',
+    '6. Atlas Express Service reserves the right to update tracking status and payment records after verification.'
+  ];
+  terms.forEach((t)=>{
+    if(y > MAX_Y-20) return;
+    doc.setTextColor(navy); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+    const lines = wrap(t, CW-10, 10.5);
+    doc.setFont('helvetica','normal'); doc.setTextColor('#1E293B'); doc.setFontSize(10.5);
+    doc.text(lines, M+4, y);
+    y+= lines.length*5.2 + 6;
+  });
+  y+=4;
+  // Professional info box
+  premiumBox(M,y,CW,18,'#EFF6FF');
+  doc.setTextColor('#1E40AF'); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+  doc.text('Professional Handling: All shipments are handled with premium care and security protocols.', M+6, y+7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor('#475569');
+  doc.text('Contact support for any clarification regarding terms.', M+6, y+12);
+
+  footer(2);
+
+  // ========= PAGE 3 =========
+  doc.addPage();
+  pageHeader(3);
+  y = 40;
+  y = section('SHIPPING TIMELINE', y);
+  const history = Array.isArray(s.history) ? s.history : [];
+  const showHistory = history.slice(0,5);
+  showHistory.forEach(h=>{
+    if(y > MAX_Y-65) return;
+    if(h.status && !STAGES.includes(h.status)) return;
+    doc.setTextColor(h.status === s.status ? '#0EA5E9' : '#1E293B'); doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+    doc.text('\u2022 ' + clean(h.status), M+4, y);
+    doc.setTextColor('#64748B'); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    try{ doc.text(new Date(h.time).toLocaleString(), PW-M, y, {align:'right'}); }catch(_){}
+    y+=8;
+  });
+  y+=6;
+  y = section('PAYMENT SUMMARY', y);
+  const total = parseMoney(s.amountToPay); const paid = parseMoney(s.amountPaid) || 0; const balance = total == null ? null : Math.max(total-paid,0);
+  const payRows = [['Amount to be Paid', total==null ? clean(s.amountToPay) : money(total)], ['Amount Paid', money(paid)], ['Balance Due', balance==null ? 'N/A' : money(balance)], ['Payment Status', s.paymentStatus || 'Unpaid']];
+  payRows.forEach(r=>{
+    premiumBox(M,y,CW,9,'#FFFFFF');
+    doc.setTextColor('#475569'); doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.text(r[0], M+5, y+6);
+    doc.setTextColor(navy); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(clean(r[1]), PW-M-5, y+6, {align:'right'}); y+=12;
+  });
+  y+=6;
+  y = section('ADMIN NOTE \u2014 REFERENCE', y);
+  const refNote = s.invoiceNote ?? s.notes ?? '\u2014';
+  let refLines = wrap(refNote, CW-18, 11);
+  if(refLines.length > 4) refLines = refLines.slice(0,4);
+  const refH = refLines.length * 6 + 14;
+  premiumBox(M,y,CW,refH,'#FFFBEB');
+  doc.setTextColor('#1F2937'); doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  doc.text(refLines, M+9, y+9); y+= refH+10;
+
+  const stampY = y+2;
+  const stampW = (CW-14)/3; const stampH = 30; const gap2 = 7;
+  drawStamp(M, stampY, stampW, stampH, 'ATLAS EXPRESS', 'SERVICE', '#0A1931');
+  drawStamp(M+stampW+gap2, stampY, stampW, stampH, 'GOODS ARE LEGAL', 'CLEARED', '#166534');
+  drawStamp(M+(stampW+gap2)*2, stampY, stampW, stampH, 'SECURITY APPROVAL', 'VERIFIED', '#991B1B');
+  doc.setTextColor('#64748B'); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.text('Premium Professional Invoice - Stamped & Verified | Atlas Express Service', PW/2, stampY+stampH+7, {align:'center'});
+
+  footer(3);
+  doc.save('AtlasExpress-Invoice-' + s.id + '.pdf');
+  toast('Professional invoice generated (3 pages) \u2713');
+}
+
+</script>
+</body>
+</html>
